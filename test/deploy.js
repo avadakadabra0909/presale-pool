@@ -30,17 +30,16 @@ describe('deploy', () => {
     });
 
     it('can be deployed with balance', async () => {
-        let fiveEth = web3.utils.toWei(5, "ether");
         let PresalePool = await util.deployContract(
-            web3, "PresalePool", creator, defaultPoolArgs, fiveEth
+            web3, "PresalePool", creator, defaultPoolArgs, web3.utils.toWei(5, "ether")
         );
 
         let expectedBalances = {}
         expectedBalances[creator] = {
-            remaining: fiveEth,
-            contribution: web3.utils.toWei(0, "ether")
+            remaining: web3.utils.toWei(0, "ether"),
+            contribution: web3.utils.toWei(5, "ether")
         }
-        await util.verifyState(web3, PresalePool, expectedBalances, fiveEth);
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
     });
 });
 

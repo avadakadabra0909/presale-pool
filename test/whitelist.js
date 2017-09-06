@@ -11,7 +11,6 @@ describe('whitelist', () => {
     let buyer1;
     let buyer2;
     let web3;
-
     before(async () => {
         let result = await server.setUp();
         web3 = result.web3;
@@ -51,8 +50,8 @@ describe('whitelist', () => {
 
         let expectedBalances = {}
         expectedBalances[buyer1] = {
-            remaining: web3.utils.toWei(5, "ether"),
-            contribution: web3.utils.toWei(0, "ether"),
+            remaining: web3.utils.toWei(0, "ether"),
+            contribution: web3.utils.toWei(5, "ether"),
             whitelisted: true
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
@@ -83,12 +82,12 @@ describe('whitelist', () => {
 
         let expectedBalances = {}
         expectedBalances[buyer1] = {
-            remaining: web3.utils.toWei(5, "ether"),
-            contribution: web3.utils.toWei(0, "ether"),
+            remaining: web3.utils.toWei(0, "ether"),
+            contribution: web3.utils.toWei(5, "ether"),
         }
         expectedBalances[buyer2] = {
-            remaining: web3.utils.toWei(1, "ether"),
-            contribution: web3.utils.toWei(0, "ether"),
+            remaining: web3.utils.toWei(0, "ether"),
+            contribution: web3.utils.toWei(1, "ether"),
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(6, "ether"));
 
@@ -104,6 +103,10 @@ describe('whitelist', () => {
             PresalePool.methods.modifyWhitelist([buyer1], []),
             creator
         );
+        expectedBalances[buyer2].whitelisted = false
+        expectedBalances[buyer2].contribution = web3.utils.toWei(0, "ether")
+        expectedBalances[buyer2].remaining = web3.utils.toWei(1, "ether")
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(6, "ether"));
 
         await util.sendTransactionWithGas(
             web3,
@@ -124,9 +127,7 @@ describe('whitelist', () => {
             )
         );
 
-        expectedBalances[buyer1].remaining = web3.utils.toWei(10, "ether");
-        expectedBalances[buyer1].whitelisted = true;
-        expectedBalances[buyer2].whitelisted = false;
+        expectedBalances[buyer1].contribution = web3.utils.toWei(10, "ether");
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(11, "ether"));
 
         await util.methodWithGas(
@@ -156,7 +157,7 @@ describe('whitelist', () => {
                 value: web3.utils.toWei(1, "ether")
             }
         );
-        expectedBalances[buyer2].remaining = web3.utils.toWei(1, "ether")
+        expectedBalances[buyer2].contribution = web3.utils.toWei(1, "ether")
         expectedBalances[buyer2].whitelisted = true;
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(11, "ether"));
     });

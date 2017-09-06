@@ -4,7 +4,7 @@
   "description": "a solidity contract to pool funds for token presales",
   "directories": {},
   "scripts": {
-    "test": "mocha --reporter list --timeout 15000"
+    "test": "mocha --reporter list --timeout 30000"
   },
   "author": "",
   "license": "ISC",

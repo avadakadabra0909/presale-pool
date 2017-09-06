@@ -1,13 +1,14 @@
 const TestRPC = require("ethereumjs-testrpc");
 const Web3 = require('web3');
 
-const server = TestRPC.server();
+let server;
 
 module.exports = {
-    setUp: function() {
+    setUp: function(options) {
+        server = TestRPC.server(options);
         return new Promise(
             function (resolve, reject) {
-                let port = 8545;                
+                let port = 8545;
                 server.listen(port, function(err, blockchain) {
                     if (err) {
                         reject(err);

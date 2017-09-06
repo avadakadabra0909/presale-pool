@@ -79,13 +79,13 @@ describe('closed state', () => {
         );
         let expectedBalances = {}
         expectedBalances[buyer1] = {
-            remaining: web3.utils.toWei(5, "ether"),
-            contribution: web3.utils.toWei(0, "ether")
+            remaining: web3.utils.toWei(0, "ether"),
+            contribution: web3.utils.toWei(5, "ether")
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
         await PresalePool.methods.withdraw(-1).send({ from: buyer1 });
-        expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether")
+        expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether")
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
     });
 
@@ -119,8 +119,8 @@ describe('closed state', () => {
 
         let expectedBalances = {}
         expectedBalances[buyer1] = {
-            remaining: web3.utils.toWei(5, "ether"),
-            contribution: web3.utils.toWei(0, "ether")
+            remaining: web3.utils.toWei(0, "ether"),
+            contribution: web3.utils.toWei(5, "ether")
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
@@ -128,7 +128,7 @@ describe('closed state', () => {
             PresalePool.methods.withdraw(-1),
             buyer1
         );
-        expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether")
+        expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether")
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
     });
 
