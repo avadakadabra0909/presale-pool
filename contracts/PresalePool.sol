@@ -212,7 +212,6 @@ contract PresalePool {
             for (i = 0; i < participants.length; i++) {
                 excludedParticipant = participants[i];
                 if (!balances[excludedParticipant].whitelisted) {
-                    balances[excludedParticipant].whitelisted = false;
                     contribution = balances[excludedParticipant].contribution;
                     balances[excludedParticipant].contribution = 0;
                     balances[excludedParticipant].remaining += contribution;
@@ -245,10 +244,8 @@ contract PresalePool {
         recompute = recompute || (maxContribution > _maxContribution);
         // we did not have a maxContribution threshold and now we do
         recompute = recompute || (maxContribution == 0 && _maxContribution > 0);
-        // we lowered the maxPoolTotal threshold
-        recompute = recompute || (maxPoolTotal > _maxPoolTotal);
-        // we did not have a maxPoolTotal threshold and now we do
-        recompute = recompute || (maxPoolTotal == 0 && _maxPoolTotal > 0);
+        // we want to make maxPoolTotal lower than the current pool total
+        recompute = recompute || (poolTotal > _maxPoolTotal);
 
         minContribution = _minContribution;
         maxContribution = _maxContribution;
