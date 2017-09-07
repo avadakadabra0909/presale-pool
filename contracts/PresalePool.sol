@@ -109,39 +109,37 @@ contract PresalePool {
         token = ERC20(tokenAddress);
     }
 
-    function withdraw(int amount) public {
-        uint total;
-        if (amount < 0) {
-            total = balances[msg.sender].remaining;
-            balances[msg.sender].remaining = 0;
+    function withdrawAll() public {
+        uint total = balances[msg.sender].remaining;
+        balances[msg.sender].remaining = 0;
 
-            if (state == State.Open || state == State.Failed) {
-                total += balances[msg.sender].contribution;
-                poolTotal -= balances[msg.sender].contribution;
-                balances[msg.sender].contribution = 0;
-            } else {
-                require(state == State.Paid);
-            }
-
-            msg.sender.transfer(total);
-            Refund(msg.sender, total);
+        if (state == State.Open || state == State.Failed) {
+            total += balances[msg.sender].contribution;
+            poolTotal -= balances[msg.sender].contribution;
+            balances[msg.sender].contribution = 0;
         } else {
-            require(state == State.Open);
-            uint posAmount = uint(amount);
-            total = balances[msg.sender].remaining + balances[msg.sender].contribution;
-            require(total >= posAmount);
-            uint debit = min(balances[msg.sender].remaining, posAmount);
-            balances[msg.sender].remaining -= debit;
-            debit = posAmount - debit;
-            balances[msg.sender].contribution -= debit;
-            poolTotal -= debit;
-
-            (balances[msg.sender].contribution, balances[msg.sender].remaining) = getContribution(msg.sender, 0);
-            // must respect the minContribution limit
-            require(balances[msg.sender].remaining == 0 || balances[msg.sender].contribution > 0);
-            msg.sender.transfer(posAmount);
-            Refund(msg.sender, posAmount);
+            require(state == State.Paid);
         }
+
+        msg.sender.transfer(total);
+        Refund(msg.sender, total);
+    }
+
+    function withdraw(uint amount) public {
+        require(state == State.Open);
+        uint total = balances[msg.sender].remaining + balances[msg.sender].contribution;
+        require(total >= amount);
+        uint debit = min(balances[msg.sender].remaining, amount);
+        balances[msg.sender].remaining -= debit;
+        debit = amount - debit;
+        balances[msg.sender].contribution -= debit;
+        poolTotal -= debit;
+
+        (balances[msg.sender].contribution, balances[msg.sender].remaining) = getContribution(msg.sender, 0);
+        // must respect the minContribution limit
+        require(balances[msg.sender].remaining == 0 || balances[msg.sender].contribution > 0);
+        msg.sender.transfer(amount);
+        Refund(msg.sender, amount);
     }
 
     function transferMyTokens() public onState(State.Paid) noReentrancy {

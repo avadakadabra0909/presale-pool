@@ -86,7 +86,7 @@ describe('open state', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
         let buyerBalance = await web3.eth.getBalance(buyer1);
-        await util.methodWithGas(PresalePool.methods.withdraw(-1), buyer1);
+        await util.methodWithGas(PresalePool.methods.withdrawAll(), buyer1);
         expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether");
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
@@ -133,7 +133,7 @@ describe('open state', () => {
             }
         );
 
-        await util.methodWithGas(PresalePool.methods.withdraw(-1), buyer2);
+        await util.methodWithGas(PresalePool.methods.withdrawAll(), buyer2);
 
         let expectedBalances = {}
         expectedBalances[buyer1] = {
@@ -233,7 +233,7 @@ describe('open state', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
         await util.methodWithGas(
-            PresalePool.methods.withdraw(-1),
+            PresalePool.methods.withdrawAll(),
             buyer2
         )
         expectedBalances[buyer2].contribution = web3.utils.toWei(0, "ether");
@@ -275,7 +275,7 @@ describe('open state', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
         await util.methodWithGas(
-            PresalePool.methods.withdraw(-1),
+            PresalePool.methods.withdrawAll(),
             buyer1
         );
         expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether")

@@ -57,7 +57,7 @@ describe('closed state', () => {
         );
 
         await util.expectVMException(
-            PresalePool.methods.withdraw(-1).send({ from: buyer1 })
+            PresalePool.methods.withdrawAll().send({ from: buyer1 })
         );
     });
 
@@ -84,7 +84,7 @@ describe('closed state', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
-        await PresalePool.methods.withdraw(-1).send({ from: buyer1 });
+        await PresalePool.methods.withdrawAll().send({ from: buyer1 });
         expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether")
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
     });
@@ -125,7 +125,7 @@ describe('closed state', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
         await util.methodWithGas(
-            PresalePool.methods.withdraw(-1),
+            PresalePool.methods.withdrawAll(),
             buyer1
         );
         expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether")

@@ -131,7 +131,7 @@ describe('whitelist', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(11, "ether"));
 
         await util.methodWithGas(
-            PresalePool.methods.withdraw(-1),
+            PresalePool.methods.withdrawAll(),
             buyer2
         );
         expectedBalances[buyer2].remaining = web3.utils.toWei(0, "ether")
