@@ -9,7 +9,10 @@ const bodyParser = require('koa-bodyparser');
 const render = require('koa-ejs');
 
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider("https://ropsten.infura.io/"));
+const web3 = new Web3(new Web3.providers.HttpProvider(
+    process.env.PROVIDER_ENDPOINT ||
+    "https://ropsten.infura.io/"
+));
 
 const fs = require("fs");
 const path = require('path');
