@@ -8,21 +8,15 @@ const bodyParser = require('koa-bodyparser');
 
 const render = require('koa-ejs');
 
-const path = require('path');
-const fs = require("fs");
-
-const solc = require('solc')
-
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider("https://ropsten.infura.io/"));
 
-let compiledContract = solc.compile(
-    fs.readFileSync(`./contracts/PresalePool.sol`, 'utf8'), 1
-).contracts[`:PresalePool`];
-let contractABI = JSON.parse(compiledContract.interface);
-let PresalePool = new web3.eth.Contract(contractABI);
+const fs = require("fs");
+const path = require('path');
 
-console.log("finished compiling");
+let contractABI = JSON.parse(fs.readFileSync("./contracts/PresalePool.json"));
+let contractBytecode = fs.readFileSync("./contracts/PresalePool.code");
+let PresalePool = new web3.eth.Contract(contractABI);
 
 function isFloat(value) {
     if (/^(\-|\+)?([0-9]+(\.[0-9]+)?)$/
@@ -46,29 +40,26 @@ function toArray(value) {
     .filter((str) => str.length > 0 );
 }
 
-async function deployContract(contractName, myAddress, contractArgs, initialBalance) {
-    initialBalance = valueOr(initialBalance, 0);
-    let bytecode = "0x"+compiledContract.bytecode;
-    let deploy = PresalePool.deploy({ data: bytecode, arguments: contractArgs });
+async function deployContract(myAddress, contractArgs) {
+    let deploy = PresalePool.deploy({ data: contractBytecode, arguments: contractArgs });
 
     return {
-        value: initialBalance,
+        value: 0,
         bytecode: deploy.encodeABI(),
         gas: await deploy.estimateGas({
-            from: myAddress,
-            value: web3.utils.toWei(initialBalance, "ether"),
+            from: myAddress
         }),
         abi: contractABI
     };
 }
 
-async function method(methodName, contractAddress, myAddress, args) {
+async function method(methodName, contractAddress, myAddress, args, value) {
     PresalePool.options.address = contractAddress;
     let m = PresalePool.methods[methodName](...args);
 
     return {
         toAddress: contractAddress,
-        value: 0,
+        value: value || 0,
         bytecode: m.encodeABI(),
         gas: await m.estimateGas({ from: myAddress })
     }
@@ -89,7 +80,6 @@ router.get('/deploy', async (ctx, next) => {
 });
 router.post('/deploy', async (ctx, next) => {
     let address = ctx.request.body.address;
-    let value = ctx.request.body.value;
 
     if (!address) {
         ctx.status = 400;
@@ -97,7 +87,7 @@ router.post('/deploy', async (ctx, next) => {
         return;
     }
 
-    for (let argName of ["minContribution", "maxContribution", "maxPoolTotal", "value"]) {
+    for (let argName of ["minContribution", "maxContribution", "maxPoolTotal"]) {
         let argValue = ctx.request.body[argName];
         if (argValue && !isFloat(argValue)) {
             ctx.status = 400;
@@ -106,17 +96,16 @@ router.post('/deploy', async (ctx, next) => {
         }
     }
 
-    let whitelist = toArray(ctx.request.body.whitelist);
+    let admins = toArray(ctx.request.body.admins);
 
     contractArgs = [];
     contractArgs.push(web3.utils.toWei(valueOr(ctx.request.body.minContribution, 0), "ether"));
     contractArgs.push(web3.utils.toWei(valueOr(ctx.request.body.maxContribution, 0), "ether"));
     contractArgs.push(web3.utils.toWei(valueOr(ctx.request.body.maxPoolTotal, 0), "ether"));
-    contractArgs.push(whitelist.length == 0);
-    contractArgs.push(whitelist);
+    contractArgs.push(admins);
 
     await ctx.render('deployResult',
-        await deployContract("PresalePool", address, contractArgs, value)
+        await deployContract(address, contractArgs)
     );
 });
 
@@ -247,6 +236,43 @@ router.post('/setToken', async (ctx, next) => {
 
     await ctx.render('result',
         await method("setToken", contractAddress, myAddress, [tokenAddress])
+    );
+});
+
+
+router.get('/refundPresale', async (ctx, next) => {
+    await ctx.render('form', {
+        method: "payout",
+        arguments: [{
+            name: "amount",
+            description: "Amount to refund in eth (must be greater than or equal to total pool value)",
+            type: "number"
+        }]
+    });
+});
+router.post('/refundPresale', async (ctx, next) => {
+    let amount = ctx.request.body.amount;
+    let contractAddress = ctx.request.body.contractAddress;
+    let myAddress = ctx.request.body.myAddress;
+
+    if (!myAddress) {
+        ctx.status = 400;
+        ctx.body = "missing myAddress";
+        return;
+    }
+    if (!amount) {
+        ctx.status = 400;
+        ctx.body = "missing amount";
+        return;
+    }
+    if (!contractAddress) {
+        ctx.status = 400;
+        ctx.body = "missing contractAddress";
+        return;
+    }
+
+    await ctx.render('result',
+        await method("payToPresale", contractAddress, myAddress, [], web3.utils.toWei(amount, "ether"))
     );
 });
 

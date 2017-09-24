@@ -18,7 +18,8 @@
         <br>
         <% arguments.forEach(function(arg){ %>
           <div>
-            <label for="<%= arg.name %>"><%= arg.description %>:</label> <input type="<%= arg.type %>" id="<%= arg.name %>" name="<%= arg.name %>"  size="50">
+            <label for="<%= arg.name %>"><%= arg.description %>:</label>
+              <input type="<%= arg.type %>" <%if (arg.type == 'number') {%>  step='any'  <%}%> id="<%= arg.name %>" name="<%= arg.name %>"  size="50">
           </div>
           <br>
         <% }); %>

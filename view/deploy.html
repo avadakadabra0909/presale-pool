@@ -13,25 +13,21 @@
         </div>
         <br>
         <div>
-          <label for="value">Your initial deposit in eth:</label> <input type="number" id="value" name="value">
+            <label for="minContribution">Minimum individual contribution in eth:</label> <input type="number" id="minContribution" name="minContribution" step="any">
         </div>
         <br>
         <div>
-            <label for="minContribution">Minimum individual contribution in eth:</label> <input type="number" id="minContribution" name="minContribution">
+            <label for="maxContribution">Maximum individual contribution in eth:</label> <input type="number" id="maxContribution" name="maxContribution" step="any">
         </div>
         <br>
         <div>
-            <label for="maxContribution">Maximum individual contribution in eth:</label> <input type="number" id="maxContribution" name="maxContribution">
+            <label for="maxPoolTotal">Maximum total pool contribution in eth :</label> <input type="number" id="maxPoolTotal" name="maxPoolTotal" step="any">
         </div>
         <br>
         <div>
-            <label for="maxPoolTotal">Maximum total pool contribution in eth :</label> <input type="number" id="maxPoolTotal" name="maxPoolTotal">
-        </div>
-        <br>
-        <div>
-            <label for="whitelist">whitelist:</label>
+            <label for="admins">Enter a list of addresses corresponding to other admins who have the power to modify this contract:</label>
             <br>
-            <textarea id="whitelist" name="whitelist" cols="50" rows="10"></textarea>
+            <textarea id="admins" name="admins" cols="50" rows="10"></textarea>
         </div>
         <br>
         <div class="button">
