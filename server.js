@@ -25,10 +25,6 @@ function isFloat(value) {
   return false;
 }
 
-function valueOr(value, defaultValue) {
-    return value ? value : defaultValue;
-}
-
 function toArray(value) {
     if (!value) {
         return [];
@@ -57,11 +53,13 @@ async function method(methodName, contractAddress, myAddress, args, value) {
     PresalePool.options.address = contractAddress;
     let m = PresalePool.methods[methodName](...args);
 
+    value = value || 0;
+
     return {
         toAddress: contractAddress,
-        value: value || 0,
+        value: value,
         bytecode: m.encodeABI(),
-        gas: await m.estimateGas({ from: myAddress })
+        gas: await m.estimateGas({ from: myAddress, value:  web3.utils.toWei(value, "ether")})
     }
 }
 
@@ -99,9 +97,9 @@ router.post('/deploy', async (ctx, next) => {
     let admins = toArray(ctx.request.body.admins);
 
     contractArgs = [];
-    contractArgs.push(web3.utils.toWei(valueOr(ctx.request.body.minContribution, 0), "ether"));
-    contractArgs.push(web3.utils.toWei(valueOr(ctx.request.body.maxContribution, 0), "ether"));
-    contractArgs.push(web3.utils.toWei(valueOr(ctx.request.body.maxPoolTotal, 0), "ether"));
+    contractArgs.push(web3.utils.toWei(ctx.request.body.minContribution || 0, "ether"));
+    contractArgs.push(web3.utils.toWei(ctx.request.body.maxContribution || 0, "ether"));
+    contractArgs.push(web3.utils.toWei(ctx.request.body.maxPoolTotal || 0, "ether"));
     contractArgs.push(admins);
 
     await ctx.render('deployResult',
@@ -272,7 +270,7 @@ router.post('/refundPresale', async (ctx, next) => {
     }
 
     await ctx.render('result',
-        await method("payToPresale", contractAddress, myAddress, [], web3.utils.toWei(amount, "ether"))
+        await method("refundPresale", contractAddress, myAddress, [], amount)
     );
 });
 
@@ -501,9 +499,9 @@ router.post('/setContributionSettings', async (ctx, next) => {
     }
 
     let contractArgs = [];
-    contractArgs.push(web3.utils.toWei(valueOr(ctx.request.body.minContribution, 0), "ether"));
-    contractArgs.push(web3.utils.toWei(valueOr(ctx.request.body.maxContribution, 0), "ether"));
-    contractArgs.push(web3.utils.toWei(valueOr(ctx.request.body.maxPoolTotal, 0), "ether"));
+    contractArgs.push(web3.utils.toWei(ctx.request.body.minContribution || 0, "ether"));
+    contractArgs.push(web3.utils.toWei(ctx.request.body.maxContribution || 0, "ether"));
+    contractArgs.push(web3.utils.toWei(ctx.request.body.maxPoolTotal || 0, "ether"));
 
     await ctx.render('result',
         await method(
