@@ -216,7 +216,7 @@ router.get('/setToken', async (ctx, next) => {
 });
 router.post('/setToken', async (ctx, next) => {
     let contractAddress = ctx.request.body.contractAddress;
-    let tokenAddress = ctx.request.body.contractAddress;
+    let tokenAddress = ctx.request.body.tokenAddress;
     let myAddress = ctx.request.body.myAddress;
 
     if (!myAddress) {
