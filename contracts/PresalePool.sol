@@ -5,6 +5,12 @@ interface ERC20 {
     function balanceOf(address _owner) constant returns (uint balance);
 }
 
+interface FeeManager {
+    function create(uint _feesPercentage, address[] _feeRecipients);
+    function claimFee(address _contractAddress);
+    function distrbuteFees();
+}
+
 contract PresalePool {
     enum State { Open, Failed, Paid }
     State public state;
@@ -33,11 +39,17 @@ contract PresalePool {
     uint gasFundBalance;
 
     ERC20 public token;
+    FeeManager public feeManager;
+    uint totalFees;
+    uint feesPercentage;
 
     event Deposit(
         address indexed _from,
         uint _value,
         uint _poolBalance
+    );
+    event FeeInstalled(
+        uint _percentage
     );
     event TokenAddressInstalled(
         address _tokenAddress,
@@ -108,7 +120,6 @@ contract PresalePool {
         minContribution = _minContribution;
         maxContribution = _maxContribution;
         maxPoolBalance = _maxPoolBalance;
-
         validateContributionSettings();
         ContributionSettingsChanged(minContribution, maxContribution, maxPoolBalance);
 
@@ -120,6 +131,13 @@ contract PresalePool {
                 AddAdmin(admin);
                 admins.push(admin);
             }
+        }
+
+        FeeInstalled(feesPercentage);
+        if (feesPercentage > 0) {
+            // 50 % fee is excessive
+            require(feesPercentage * 2 < 1 ether);
+            feeManager.create(feesPercentage, admins);
         }
 
         if (msg.value > 0) {
@@ -136,7 +154,10 @@ contract PresalePool {
         changeState(State.Paid);
         presaleAddress = _presaleAddress;
         refundable = true;
-        presaleAddress.transfer(poolBalance);
+        if (feesPercentage > 0) {
+            totalFees = (poolBalance * feesPercentage) / 1 ether;
+        }
+        presaleAddress.transfer(poolBalance - totalFees);
     }
 
     function refundPresale() payable public onState(State.Paid) {
@@ -144,6 +165,18 @@ contract PresalePool {
         require(msg.sender == presaleAddress || isAdmin(msg.sender));
         gasFundBalance = msg.value - poolBalance;
         changeState(State.Failed);
+    }
+
+    function transferFees() public onState(State.Paid) {
+        require(!refundable && totalFees > 0);
+        uint amount = totalFees;
+        totalFees = 0;
+        (address(feeManager)).transfer(amount);
+    }
+
+    function transferAndDistributeFees() public {
+        transferFees();
+        feeManager.distrbuteFees();
     }
 
     function setToken(address tokenAddress) public onlyAdmins {
