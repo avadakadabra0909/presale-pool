@@ -29,32 +29,77 @@ describe('open state', () => {
         PresalePool = await util.deployContract(web3, "PresalePool", creator, defaultPoolArgs);
     });
 
+    it('validates contribution settings in setContributionSettings', async () => {
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.setContributionSettings(3, 2, 0),
+                creator
+            )
+        );
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.setContributionSettings(0, 2, 1),
+                creator
+            )
+        );
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.setContributionSettings(3, 0, 2),
+                creator
+            )
+        );
+
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(0, 2, 3),
+            creator
+        );
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(1, 2, 3),
+            creator
+        );
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(0, 2, 0),
+            creator
+        );
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(0, 0, 3),
+            creator
+        );
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(3, 0, 0),
+            creator
+        );
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(3, 0, 3),
+            creator
+        );
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(0, 3, 3),
+            creator
+        );
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(3, 3, 3),
+            creator
+        );
+    });
+
     it('accepts deposits', async () => {
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
 
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
 
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer2,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(3, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer2,
+            web3.utils.toWei(3, "ether")
         );
 
         let expectedBalances = {}
@@ -70,13 +115,10 @@ describe('open state', () => {
     });
 
     it('performs refunds', async () => {
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
 
         let expectedBalances = {}
@@ -96,13 +138,10 @@ describe('open state', () => {
     });
 
     it('allows withdrawls', async () => {
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
 
         let expectedBalances = {}
@@ -124,13 +163,10 @@ describe('open state', () => {
     });
 
     it('does not refund participants without deposits', async () => {
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
 
         await util.methodWithGas(PresalePool.methods.withdrawAll(), buyer2);
@@ -144,22 +180,16 @@ describe('open state', () => {
     });
 
     it('does not allow participants to withdraw more than their deposits', async () => {
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
 
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer2,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(3, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer2,
+            web3.utils.toWei(3, "ether")
         );
 
         let expectedBalances = {}
@@ -182,21 +212,15 @@ describe('open state', () => {
     });
 
     it('does not allow a withdrawl to result in a balance less than minContribution', async () => {
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer2,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(3, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer2,
+            web3.utils.toWei(3, "ether")
         );
 
         let expectedBalances = {}
@@ -240,14 +264,132 @@ describe('open state', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(2, "ether"));
     });
 
+    it('does not allow a withdrawl to result in a balance greater than maxContribution', async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer2,
+            web3.utils.toWei(3, "ether")
+        );
+
+        let expectedBalances = {}
+        expectedBalances[buyer1] = {
+            remaining: web3.utils.toWei(0, "ether"),
+            contribution: web3.utils.toWei(5, "ether")
+        }
+        expectedBalances[buyer2] = {
+            remaining: web3.utils.toWei(0, "ether"),
+            contribution: web3.utils.toWei(3, "ether")
+        }
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(8, "ether"));
+
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(
+                0, web3.utils.toWei(2, "ether"), 0
+            ),
+            creator
+        )
+        expectedBalances[buyer1] = {
+            remaining: web3.utils.toWei(3, "ether"),
+            contribution: web3.utils.toWei(2, "ether")
+        }
+        expectedBalances[buyer2] = {
+            remaining: web3.utils.toWei(1, "ether"),
+            contribution: web3.utils.toWei(2, "ether")
+        }
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(8, "ether"));
+
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.withdraw(web3.utils.toWei(2, "ether")),
+                buyer1
+            )
+        );
+        await util.methodWithGas(
+            PresalePool.methods.withdraw(web3.utils.toWei(3, "ether")),
+            buyer1
+        );
+        expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether");
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
+
+        await util.methodWithGas(
+            PresalePool.methods.withdrawAll(),
+            buyer2
+        );
+        expectedBalances[buyer2].contribution = web3.utils.toWei(0, "ether");
+        expectedBalances[buyer2].remaining = web3.utils.toWei(0, "ether");
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(2, "ether"));
+
+        await util.methodWithGas(
+            PresalePool.methods.withdrawAll(),
+            buyer2
+        );
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(2, "ether"));
+    });
+
+    it('does not allow a withdrawl to result in a pool balance greater than maxPoolTotal', async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer2,
+            web3.utils.toWei(3, "ether")
+        );
+
+        let expectedBalances = {}
+        expectedBalances[buyer1] = {
+            remaining: web3.utils.toWei(0, "ether"),
+            contribution: web3.utils.toWei(5, "ether")
+        }
+        expectedBalances[buyer2] = {
+            remaining: web3.utils.toWei(0, "ether"),
+            contribution: web3.utils.toWei(3, "ether")
+        }
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(8, "ether"));
+
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(
+                0, 0, web3.utils.toWei(2, "ether")
+            ),
+            creator
+        )
+        expectedBalances[buyer1] = {
+            remaining: web3.utils.toWei(3, "ether"),
+            contribution: web3.utils.toWei(2, "ether")
+        }
+        expectedBalances[buyer2] = {
+            remaining: web3.utils.toWei(3, "ether"),
+            contribution: web3.utils.toWei(0, "ether")
+        }
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(8, "ether"));
+
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.withdraw(web3.utils.toWei(2, "ether")),
+                buyer1
+            )
+        );
+        await util.methodWithGas(
+            PresalePool.methods.withdraw(web3.utils.toWei(3, "ether")),
+            buyer1
+        )
+        expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether");
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
+    });
+
+
     it('can transition to failed state', async () => {
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
 
         // can only be performed by creator
@@ -257,13 +399,10 @@ describe('open state', () => {
         await util.methodWithGas(PresalePool.methods.fail(), creator);
 
         await util.expectVMException(
-            util.sendTransactionWithGas(
-                web3,
-                {
-                    from: buyer2,
-                    to: PresalePool.options.address,
-                    value: web3.utils.toWei(3, "ether")
-                }
+            util.methodWithGas(
+                PresalePool.methods.deposit(),
+                buyer2,
+                web3.utils.toWei(3, "ether")
             )
         );
 
@@ -282,15 +421,7 @@ describe('open state', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
         await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.open(), creator)
-        );
-
-        await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.close(), creator)
-        );
-
-        await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.payToPresale(creator), creator)
+            util.methodWithGas(PresalePool.methods.payToPresale(creator, 1), creator)
         );
     });
 });

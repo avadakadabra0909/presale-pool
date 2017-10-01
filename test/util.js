@@ -13,15 +13,14 @@ async function deployContract(web3, contractName, creatorAddress, contractArgs, 
     let bytecode = compiledContract.bytecode;
     let Contract = new web3.eth.Contract(JSON.parse(abi));
     let deploy = Contract.deploy({ data: bytecode, arguments: contractArgs });
-    let gasEstimate = await deploy.estimateGas({ from: creatorAddress });
+    initialBalance = initialBalance || 0;
+    let gasEstimate = await deploy.estimateGas({ from: creatorAddress, value: initialBalance });
 
     let sendOptions = {
         from: creatorAddress,
-        gas: 2*gasEstimate,
+        gas: gasEstimate,
+        value: initialBalance
     };
-    if (initialBalance) {
-        sendOptions.value = initialBalance;
-    }
 
     return deploy.send(sendOptions);
 }
@@ -37,10 +36,6 @@ function expectVMException(prom) {
     );
 }
 
-async function sendTransactionWithGas(web3, txn) {
-    txn.gas = 1000000;
-    return await web3.eth.sendTransaction(txn);
-}
 async function methodWithGas(method, from, value) {
     let txn = { from: from, gas: 1000000 };
     if (value) {
@@ -87,18 +82,18 @@ async function verifyState(web3, PresalePool, expectedBalances, expectedPoolBala
         expect(balances[address]).to.include(balance);
     }
 
-    let poolBalance = await web3.eth.getBalance(
+    let contractBalance = await web3.eth.getBalance(
         PresalePool.options.address
     );
-    expect(poolBalance).to.equal(expectedPoolBalance);
+    expect(contractBalance).to.equal(expectedPoolBalance);
 
-    expect(parseInt(await PresalePool.methods.poolTotal().call())).to.equal(totalContribution);
+    let poolBalance = await PresalePool.methods.poolBalance().call();
+    expect(parseInt(poolBalance)).to.equal(totalContribution);
 }
 
 module.exports = {
     deployContract: deployContract,
     expectVMException: expectVMException,
-    sendTransactionWithGas: sendTransactionWithGas,
     methodWithGas: methodWithGas,
     getBalances: getBalances,
     verifyState: verifyState,

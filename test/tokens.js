@@ -44,39 +44,29 @@ describe('tokens', () => {
     });
 
     it("transferMyTokens()", async () => {
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: creator,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(2, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            creator,
+            web3.utils.toWei(2, "ether")
         );
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer2,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(1, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer2,
+            web3.utils.toWei(1, "ether")
         );
 
-        await util.methodWithGas(PresalePool.methods.close(), creator)
         await util.methodWithGas(
             PresalePool.methods.setContributionSettings(
                 0, web3.utils.toWei(2, "ether"), web3.utils.toWei(3, "ether")
             ),
             creator
         )
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress), creator);
+        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
 
         let expectedBalances = {}
         expectedBalances[creator] = {
@@ -118,39 +108,29 @@ describe('tokens', () => {
     });
 
     it("transferAllTokens()", async () => {
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: creator,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(2, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            creator,
+            web3.utils.toWei(2, "ether")
         );
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer2,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(1, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer2,
+            web3.utils.toWei(1, "ether")
         );
 
-        await util.methodWithGas(PresalePool.methods.close(), creator)
         await util.methodWithGas(
             PresalePool.methods.setContributionSettings(
                 0, web3.utils.toWei(2, "ether"), web3.utils.toWei(3, "ether")
             ),
             creator
         )
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress), creator);
+        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
 
         let expectedBalances = {}
         expectedBalances[creator] = {
@@ -182,10 +162,6 @@ describe('tokens', () => {
         );
 
         await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
-        // expect no failures
-        await util.expectVMException(
-            PresalePool.methods.failures(0).call()
-        );
 
         expectedBalances[creator].contribution = web3.utils.toWei(0, "ether");
         expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether");
@@ -198,25 +174,18 @@ describe('tokens', () => {
     });
 
     it("transferMyTokens() fails on blacklisted sender", async () => {
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: blacklistedBuyer,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            blacklistedBuyer,
+            web3.utils.toWei(5, "ether")
         );
 
-        await util.methodWithGas(PresalePool.methods.close(), creator)
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress), creator);
+        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
 
         let expectedBalances = {}
         expectedBalances[buyer1] = {
@@ -258,25 +227,18 @@ describe('tokens', () => {
     });
 
     it("transferAllTokens() fails on blacklisted sender", async () => {
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: buyer1,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
         );
-        await util.sendTransactionWithGas(
-            web3,
-            {
-                from: blacklistedBuyer,
-                to: PresalePool.options.address,
-                value: web3.utils.toWei(5, "ether")
-            }
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            blacklistedBuyer,
+            web3.utils.toWei(5, "ether")
         );
 
-        await util.methodWithGas(PresalePool.methods.close(), creator)
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress), creator);
+        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
 
         let expectedBalances = {}
         expectedBalances[buyer1] = {
@@ -299,12 +261,10 @@ describe('tokens', () => {
         .to.equal("940");
 
         await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
-        let failedOn = await PresalePool.methods.failures(0).call();
-        expect(failedOn.toLowerCase()).to.equal(blacklistedBuyer)
         expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether");
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
-        // buyer1 already claimed tokens so this doesn't do anythin
+        // buyer1 already claimed tokens so this doesn't do anything
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
         // doesn't get anything because buyer2 is not in the pool
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer2);

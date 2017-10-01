@@ -30,12 +30,12 @@ describe('deploy', () => {
             PresalePool.options.address
         );
 
-        await util.methodWithGas(PresalePool.methods.close(), creator);
-        await util.methodWithGas(PresalePool.methods.open(), admins[0]);
-        await util.methodWithGas(PresalePool.methods.close(), admins[1]);
+        await util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0), creator);
+        await util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0), admins[0]);
+        await util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0), admins[1]);
 
         await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.open(), nonAdmin)
+            util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0), nonAdmin)
         );
     });
 
@@ -59,6 +59,18 @@ describe('deploy', () => {
             contribution: web3.utils.toWei(5, "ether")
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
+    });
+
+    it('validates contribution settings during deploy', async () => {
+        await util.expectVMException(
+            util.deployContract(web3, "PresalePool", creator, [3, 2, 0, []])
+        );
+        await util.expectVMException(
+            util.deployContract(web3, "PresalePool", creator, [0, 2, 1, []])
+        );
+        await util.expectVMException(
+            util.deployContract(web3, "PresalePool", creator, [3, 0, 2, []])
+        );
     });
 });
 
