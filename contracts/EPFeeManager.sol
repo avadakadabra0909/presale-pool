@@ -46,7 +46,9 @@ contract EPFeeManager {
         uint share = (fees.numerator * fees.amount) / fees.denominator;
         fees.claimed[msg.sender] = true;
 
-        msg.sender.transfer(share);
+        require(
+            msg.sender.call.value(share)()
+        );
     }
 
     function distrbuteFees() external {
@@ -59,7 +61,9 @@ contract EPFeeManager {
             var recipient = fees.recipients[i];
             if (!fees.claimed[recipient]) {
                 fees.claimed[recipient] = true;
-                recipient.transfer(share);
+                require(
+                    recipient.call.value(share)()
+                );
             }
         }
     }
@@ -67,7 +71,9 @@ contract EPFeeManager {
     function claimTeamMemberFees() external {
         uint amount = teamBalances[msg.sender];
         teamBalances[msg.sender] = 0;
-        msg.sender.transfer(amount);
+        require(
+            msg.sender.call.value(amount)()
+        );
     }
 
     function splitTeamFees() public {
@@ -87,7 +93,9 @@ contract EPFeeManager {
             address member = epTeam[i];
             uint amount = teamBalances[member];
             teamBalances[member] = 0;
-            member.transfer(amount);
+            require(
+                member.call.value(amount)()
+            );
         }
     }
 

@@ -162,7 +162,9 @@ contract PresalePool {
         if (feesPercentage > 0) {
             totalFees = (poolBalance * feesPercentage) / 1 ether;
         }
-        presaleAddress.transfer(poolBalance - totalFees);
+        require(
+            presaleAddress.call.value(poolBalance - totalFees)()
+        );
     }
 
     function refundPresale() payable external onState(State.Paid) {
@@ -176,7 +178,9 @@ contract PresalePool {
         require(!refundable && totalFees > 0);
         uint amount = totalFees;
         totalFees = 0;
-        (address(feeManager)).call.value(amount)();
+        require(
+            (address(feeManager)).call.value(amount)()
+        );
     }
 
     function transferAndDistributeFees() external {
@@ -230,7 +234,9 @@ contract PresalePool {
         }
 
         Withdrawl(msg.sender, total, 0, 0, poolBalance);
-        msg.sender.transfer(total);
+        require(
+            msg.sender.call.value(total)()
+        );
     }
 
     function withdraw(uint amount) external onState(State.Open) {
@@ -253,7 +259,9 @@ contract PresalePool {
             balance.contribution,
             poolBalance
         );
-        msg.sender.transfer(amount);
+        require(
+            msg.sender.call.value(amount)()
+        );
     }
 
     function transferMyTokens() external onState(State.Paid) noReentrancy {
