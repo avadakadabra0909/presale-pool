@@ -6,7 +6,6 @@ const util = require('./util');
 const expect = chai.expect;
 
 describe('deploy', () => {
-    let defaultPoolArgs = [0, 0, 0, []];
     let creator;
     let addresses;
     let web3;
@@ -25,7 +24,12 @@ describe('deploy', () => {
     it('can be deployed with multiple admins', async () => {
         let admins = [addresses[1].toLowerCase(), addresses[2].toLowerCase()]
         let nonAdmin = addresses[3].toLowerCase();
-        let PresalePool = await util.deployContract(web3, "PresalePool", creator, [0, 0, 0, admins]);
+        let PresalePool = await util.deployContract(
+            web3,
+            "PresalePool",
+            creator,
+            util.createPoolArgs({ admins: admins })
+        );
         let poolBalance = await web3.eth.getBalance(
             PresalePool.options.address
         );
@@ -40,7 +44,12 @@ describe('deploy', () => {
     });
 
     it('can be deployed without balance', async () => {
-        let PresalePool = await util.deployContract(web3, "PresalePool", creator, defaultPoolArgs);
+        let PresalePool = await util.deployContract(
+            web3,
+            "PresalePool",
+            creator,
+            util.createPoolArgs()
+        );
         let poolBalance = await web3.eth.getBalance(
             PresalePool.options.address
         );
@@ -50,7 +59,10 @@ describe('deploy', () => {
 
     it('can be deployed with balance', async () => {
         let PresalePool = await util.deployContract(
-            web3, "PresalePool", creator, defaultPoolArgs, web3.utils.toWei(5, "ether")
+            web3, "PresalePool",
+            creator,
+            util.createPoolArgs(),
+            web3.utils.toWei(5, "ether")
         );
 
         let expectedBalances = {}
@@ -63,13 +75,35 @@ describe('deploy', () => {
 
     it('validates contribution settings during deploy', async () => {
         await util.expectVMException(
-            util.deployContract(web3, "PresalePool", creator, [3, 2, 0, []])
+            util.deployContract(
+                web3,
+                "PresalePool",
+                creator,
+                util.createPoolArgs({
+                    minContribution: 3,
+                    maxContribution: 2
+                })
+            )
         );
         await util.expectVMException(
-            util.deployContract(web3, "PresalePool", creator, [0, 2, 1, []])
+            util.deployContract(
+                web3, "PresalePool",
+                creator,
+                util.createPoolArgs({
+                    maxContribution: 2,
+                    maxPoolBalance: 1
+                })
+            )
         );
         await util.expectVMException(
-            util.deployContract(web3, "PresalePool", creator, [3, 0, 2, []])
+            util.deployContract(
+                web3, "PresalePool",
+                creator,
+                util.createPoolArgs({
+                    minContribution: 3,
+                    maxPoolBalance: 2
+                })
+            )
         );
     });
 });

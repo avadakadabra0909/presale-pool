@@ -4,17 +4,24 @@ const solc = require('solc')
 
 const expect = chai.expect;
 
+let cache = {};
+
 async function deployContract(web3, contractName, creatorAddress, contractArgs, initialBalance) {
-    let source = fs.readFileSync(`./contracts/${contractName}.sol`, 'utf8');
-    let compiledContract = solc.compile(
-        source, 1
-    ).contracts[`:${contractName}`];
+    if (!cache[contractName]) {
+        let source = fs.readFileSync(`./contracts/${contractName}.sol`, 'utf8');
+        cache[contractName] = solc.compile(
+            source, 1
+        ).contracts[`:${contractName}`];
+    }
+    let compiledContract = cache[contractName];
+
     let abi = compiledContract.interface;
     let bytecode = compiledContract.bytecode;
     let Contract = new web3.eth.Contract(JSON.parse(abi));
     let deploy = Contract.deploy({ data: bytecode, arguments: contractArgs });
     initialBalance = initialBalance || 0;
-    let gasEstimate = await deploy.estimateGas({ from: creatorAddress, value: initialBalance });
+
+    let gasEstimate =  await deploy.estimateGas({ from: creatorAddress, value: initialBalance });
 
     let sendOptions = {
         from: creatorAddress,
@@ -23,6 +30,19 @@ async function deployContract(web3, contractName, creatorAddress, contractArgs, 
     };
 
     return deploy.send(sendOptions);
+}
+
+function createPoolArgs(options) {
+    let args = [];
+    options = options || {};
+    args.push(options.feeManager || "1111111111111111111111111111111111111111");
+    args.push(options.feesPercentage || 0);
+    args.push(options.minContribution || 0);
+    args.push(options.maxContribution || 0);
+    args.push(options.maxPoolBalance || 0);
+    args.push(options.admins || []);
+
+    return args;
 }
 
 function expectVMException(prom) {
@@ -92,6 +112,7 @@ async function verifyState(web3, PresalePool, expectedBalances, expectedPoolBala
 }
 
 module.exports = {
+    createPoolArgs: createPoolArgs,
     deployContract: deployContract,
     expectVMException: expectVMException,
     methodWithGas: methodWithGas,

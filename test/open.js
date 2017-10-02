@@ -6,7 +6,6 @@ const util = require('./util');
 const expect = chai.expect;
 
 describe('open state', () => {
-    let defaultPoolArgs = [0, 0, 0, []];
     let creator;
     let buyer1;
     let buyer2;
@@ -26,7 +25,12 @@ describe('open state', () => {
 
     let PresalePool;
     beforeEach(async () => {
-        PresalePool = await util.deployContract(web3, "PresalePool", creator, defaultPoolArgs);
+        PresalePool = await util.deployContract(
+            web3,
+            "PresalePool",
+            creator,
+            util.createPoolArgs()
+        );
     });
 
     it('validates contribution settings in setContributionSettings', async () => {

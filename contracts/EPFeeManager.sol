@@ -6,16 +6,18 @@ contract EPFeeManager {
         mapping (address => bool) claimed;
         mapping (address => bool) isRecipient;
         address[] recipients;
-        uint percentagePerRecipient;
+        uint numerator;
+        uint denominator;
         uint amount;
         bool exists;
     }
-    mapping (address => Fees) feesForContract;
-    address[] epTeam;
-    mapping (address => uint) teamBalances;
-    uint teamTotalBalance;
+    mapping (address => Fees) public feesForContract;
+    address[] public epTeam;
+    mapping (address => uint) public teamBalances;
+    uint public teamTotalBalance;
 
     function EPFeeManager(address[] _epTeam) payable {
+        require(_epTeam.length > 0);
         for (uint i = 0; i < _epTeam.length; i++) {
             var addr = _epTeam[i];
             if (!inTeam(addr)) {
@@ -30,9 +32,9 @@ contract EPFeeManager {
         var fees = feesForContract[msg.sender];
         require(fees.exists);
         require(fees.amount == 0);
-
         fees.amount = msg.value;
-        uint recipientsShare = (fees.recipients.length * fees.amount * fees.percentagePerRecipient) / 1 ether;
+
+        uint recipientsShare = fees.recipients.length * ((fees.numerator * fees.amount) / fees.denominator);
         teamTotalBalance += fees.amount - recipientsShare;
     }
 
@@ -41,7 +43,7 @@ contract EPFeeManager {
         require(fees.amount > 0);
         require(fees.isRecipient[msg.sender] && !fees.claimed[msg.sender]);
 
-        uint share = (fees.amount * fees.percentagePerRecipient) / 1 ether;
+        uint share = (fees.numerator * fees.amount) / fees.denominator;
         fees.claimed[msg.sender] = true;
 
         msg.sender.transfer(share);
@@ -51,7 +53,7 @@ contract EPFeeManager {
         var fees = feesForContract[msg.sender];
         require(fees.amount > 0);
 
-        uint share = (fees.amount * fees.percentagePerRecipient) / 1 ether;
+        uint share = (fees.numerator * fees.amount) / fees.denominator;
 
         for (uint i = 0; i < fees.recipients.length; i++) {
             var recipient = fees.recipients[i];
@@ -104,14 +106,15 @@ contract EPFeeManager {
             _feesPercentage / (_feeRecipients.length + 1),
             1 ether / 100
         );
-        uint recipientShare = (_feesPercentage - teamPercentage) / (_feeRecipients.length * _feesPercentage);
+        fees.numerator = (_feesPercentage - teamPercentage) / _feeRecipients.length;
+        fees.denominator = _feesPercentage;
+        require(fees.numerator <= fees.denominator);
 
         for (uint i = 0; i < _feeRecipients.length; i++) {
             address recipient = _feeRecipients[i];
             fees.isRecipient[recipient] = true;
             fees.recipients.push(recipient);
         }
-        fees.percentagePerRecipient = recipientShare;
     }
 
     function inTeam(address addr) internal constant returns (bool) {

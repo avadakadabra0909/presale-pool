@@ -32,9 +32,22 @@ describe('tokens', () => {
     let PresalePool;
     let TestToken;
     beforeEach(async () => {
-        PresalePool = await util.deployContract(web3, "PresalePool", creator, defaultPoolArgs);
-        TestToken = await util.deployContract(web3, "TestToken", creator, [blacklistedBuyer]);
-        await util.methodWithGas(PresalePool.methods.setToken(TestToken.options.address), creator);
+        PresalePool = await util.deployContract(
+            web3,
+            "PresalePool",
+            creator,
+            util.createPoolArgs()
+        );
+        TestToken = await util.deployContract(
+            web3,
+            "TestToken",
+            creator,
+            [blacklistedBuyer]
+        );
+        await util.methodWithGas(
+            PresalePool.methods.setToken(TestToken.options.address),
+            creator
+        );
     });
 
     it("setToken() can only be called by creator", async () => {

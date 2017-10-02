@@ -29,7 +29,12 @@ describe('pay to presale address', () => {
 
     let PresalePool;
     beforeEach(async () => {
-        PresalePool = await util.deployContract(web3, "PresalePool", creator, defaultPoolArgs);
+        PresalePool = await util.deployContract(
+            web3,
+            "PresalePool",
+            creator,
+            util.createPoolArgs()
+        );
     });
 
     async function payToPresale(expectedPayout, minPoolTotal) {

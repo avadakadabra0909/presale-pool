@@ -26,7 +26,12 @@ describe('whitelist', () => {
 
     let PresalePool;
     beforeEach(async () => {
-        PresalePool = await util.deployContract(web3, "PresalePool", creator, defaultPoolArgs);
+        PresalePool = await util.deployContract(
+            web3,
+            "PresalePool",
+            creator,
+            util.createPoolArgs()
+        );
     });
 
     it('can add addresses not already in pool to whitelist', async () => {
@@ -376,7 +381,6 @@ describe('whitelist', () => {
         )
         expectedBalances[buyer2].contribution = web3.utils.toWei(5, "ether")
         expectedBalances[buyer2].remaining = web3.utils.toWei(0, "ether")
-        console.log( "checking");
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(10, "ether"));
     });
 });

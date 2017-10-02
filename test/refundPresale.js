@@ -6,7 +6,6 @@ const util = require('./util');
 const expect = chai.expect;
 
 describe('refundPresale', () => {
-    let defaultPoolArgs = [0, 0, 0, []];
     let creator;
     let buyer1;
     let buyer2;
@@ -29,7 +28,12 @@ describe('refundPresale', () => {
 
     let PresalePool;
     beforeEach(async () => {
-        PresalePool = await util.deployContract(web3, "PresalePool", creator, defaultPoolArgs);
+        PresalePool = await util.deployContract(
+            web3,
+            "PresalePool",
+            creator,
+            util.createPoolArgs()
+        );
     });
 
     async function assertRefund(participant, expectedGain) {

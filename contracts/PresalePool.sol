@@ -7,7 +7,6 @@ interface ERC20 {
 
 interface FeeManager {
     function create(uint _feesPercentage, address[] _feeRecipients);
-    function claimFee(address _contractAddress);
     function distrbuteFees();
 }
 
@@ -34,14 +33,14 @@ contract PresalePool {
     mapping (address => ParticipantState) public balances;
     uint public poolBalance;
 
-    address presaleAddress;
-    bool refundable;
-    uint gasFundBalance;
+    address public presaleAddress;
+    bool public refundable;
+    uint public gasFundBalance;
 
     ERC20 public token;
     FeeManager public feeManager;
-    uint totalFees;
-    uint feesPercentage;
+    uint public totalFees;
+    uint public feesPercentage;
 
     event Deposit(
         address indexed _from,
@@ -113,7 +112,7 @@ contract PresalePool {
         locked = false;
     }
 
-    function PresalePool(uint _minContribution, uint _maxContribution, uint _maxPoolBalance, address[] _admins) payable {
+    function PresalePool(address _feeManager, uint _feesPercentage, uint _minContribution, uint _maxContribution, uint _maxPoolBalance, address[] _admins) payable {
         AddAdmin(msg.sender);
         admins.push(msg.sender);
 
@@ -133,8 +132,10 @@ contract PresalePool {
             }
         }
 
+        feesPercentage = _feesPercentage;
         FeeInstalled(feesPercentage);
         if (feesPercentage > 0) {
+            feeManager = FeeManager(_feeManager);
             // 50 % fee is excessive
             require(feesPercentage * 2 < 1 ether);
             feeManager.create(feesPercentage, admins);
@@ -143,6 +144,10 @@ contract PresalePool {
         if (msg.value > 0) {
             deposit();
         }
+    }
+
+    function version() public returns (uint, uint, uint) {
+        return (1, 0, 0);
     }
 
     function fail() public onlyAdmins onState(State.Open) {
@@ -171,7 +176,7 @@ contract PresalePool {
         require(!refundable && totalFees > 0);
         uint amount = totalFees;
         totalFees = 0;
-        (address(feeManager)).transfer(amount);
+        (address(feeManager)).call.value(amount)();
     }
 
     function transferAndDistributeFees() public {
