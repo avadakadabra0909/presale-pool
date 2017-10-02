@@ -38,7 +38,7 @@ contract EPFeeManager {
         teamTotalBalance += fees.amount - recipientsShare;
     }
 
-    function claimFees(address contractAddress) public {
+    function claimFees(address contractAddress) external {
         var fees = feesForContract[contractAddress];
         require(fees.amount > 0);
         require(fees.isRecipient[msg.sender] && !fees.claimed[msg.sender]);
@@ -49,7 +49,7 @@ contract EPFeeManager {
         msg.sender.transfer(share);
     }
 
-    function distrbuteFees() public {
+    function distrbuteFees() external {
         var fees = feesForContract[msg.sender];
         require(fees.amount > 0);
 
@@ -64,7 +64,7 @@ contract EPFeeManager {
         }
     }
 
-    function claimTeamMemberFees() public {
+    function claimTeamMemberFees() external {
         uint amount = teamBalances[msg.sender];
         teamBalances[msg.sender] = 0;
         msg.sender.transfer(amount);
@@ -81,7 +81,7 @@ contract EPFeeManager {
         require(isTeamMember);
     }
 
-    function splitAndDistributeTeamFees() public {
+    function splitAndDistributeTeamFees() external {
         splitTeamFees();
         for (uint i = 0; i < epTeam.length; i++) {
             address member = epTeam[i];
@@ -91,7 +91,7 @@ contract EPFeeManager {
         }
     }
 
-    function create(uint _feesPercentage, address[] _feeRecipients) public {
+    function create(uint _feesPercentage, address[] _feeRecipients) external {
         require(_feesPercentage > 0);
         require(_feeRecipients.length > 0);
         // 50 % fee is excessive

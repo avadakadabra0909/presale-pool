@@ -150,11 +150,11 @@ contract PresalePool {
         return (1, 0, 0);
     }
 
-    function fail() public onlyAdmins onState(State.Open) {
+    function fail() external onlyAdmins onState(State.Open) {
         changeState(State.Failed);
     }
 
-    function payToPresale(address _presaleAddress, uint minPoolBalance) public onlyAdmins onState(State.Open) {
+    function payToPresale(address _presaleAddress, uint minPoolBalance) external onlyAdmins onState(State.Open) {
         require(poolBalance >= minPoolBalance);
         changeState(State.Paid);
         presaleAddress = _presaleAddress;
@@ -165,7 +165,7 @@ contract PresalePool {
         presaleAddress.transfer(poolBalance - totalFees);
     }
 
-    function refundPresale() payable public onState(State.Paid) {
+    function refundPresale() payable external onState(State.Paid) {
         require(refundable && msg.value >= poolBalance);
         require(msg.sender == presaleAddress || isAdmin(msg.sender));
         gasFundBalance = msg.value - poolBalance;
@@ -179,12 +179,12 @@ contract PresalePool {
         (address(feeManager)).call.value(amount)();
     }
 
-    function transferAndDistributeFees() public {
+    function transferAndDistributeFees() external {
         transferFees();
         feeManager.distrbuteFees();
     }
 
-    function setToken(address tokenAddress) public onlyAdmins {
+    function setToken(address tokenAddress) external onlyAdmins {
         token = ERC20(tokenAddress);
         TokenAddressInstalled(tokenAddress, token.balanceOf(address(this)));
     }
@@ -211,7 +211,7 @@ contract PresalePool {
         Deposit(msg.sender, msg.value, poolBalance);
     }
 
-    function withdrawAll() public {
+    function withdrawAll() external {
         var balance = balances[msg.sender];
         uint total = balance.remaining;
         balance.remaining = 0;
@@ -233,7 +233,7 @@ contract PresalePool {
         msg.sender.transfer(total);
     }
 
-    function withdraw(uint amount) public onState(State.Open) {
+    function withdraw(uint amount) external onState(State.Open) {
         var balance = balances[msg.sender];
         uint total = balance.remaining + balance.contribution;
         require(total >= amount && amount >= balance.remaining);
@@ -256,7 +256,7 @@ contract PresalePool {
         msg.sender.transfer(amount);
     }
 
-    function transferMyTokens() public onState(State.Paid) noReentrancy {
+    function transferMyTokens() external onState(State.Paid) noReentrancy {
         uint tokenBalance = token.balanceOf(address(this));
         require(tokenBalance > 0);
         var balance = balances[msg.sender];
@@ -272,7 +272,7 @@ contract PresalePool {
         require(token.transfer(msg.sender, participantShare));
     }
 
-    function transferAllTokens() public onlyAdmins onState(State.Paid) noReentrancy {
+    function transferAllTokens() external onlyAdmins onState(State.Paid) noReentrancy {
         uint tokenBalance = token.balanceOf(address(this));
         require(tokenBalance > 0);
 
@@ -301,7 +301,7 @@ contract PresalePool {
         }
     }
 
-    function modifyWhitelist(address[] toInclude, address[] toExclude) public onlyAdmins onState(State.Open) {
+    function modifyWhitelist(address[] toInclude, address[] toExclude) external onlyAdmins onState(State.Open) {
         if (whitelistAll) {
             WhitelistEnabled();
             whitelistAll = false;
@@ -332,7 +332,7 @@ contract PresalePool {
         includeInWhitelist(toInclude);
     }
 
-    function removeWhitelist() public onlyAdmins onState(State.Open) {
+    function removeWhitelist() external onlyAdmins onState(State.Open) {
         require(!whitelistAll);
         whitelistAll = true;
         WhitelistDisabled();
@@ -340,7 +340,7 @@ contract PresalePool {
         includeInWhitelist(participants);
     }
 
-    function setContributionSettings(uint _minContribution, uint _maxContribution, uint _maxPoolBalance) public onlyAdmins onState(State.Open) {
+    function setContributionSettings(uint _minContribution, uint _maxContribution, uint _maxPoolBalance) external onlyAdmins onState(State.Open) {
         // we raised the minContribution threshold
         bool recompute = (minContribution < _minContribution);
         // we lowered the maxContribution threshold
@@ -378,7 +378,7 @@ contract PresalePool {
         }
     }
 
-    function getParticipantBalances() public constant returns(address[], uint[], uint[], bool[], bool[]) {
+    function getParticipantBalances() external constant returns(address[], uint[], uint[], bool[], bool[]) {
         uint[] memory contribution = new uint[](participants.length);
         uint[] memory remaining = new uint[](participants.length);
         bool[] memory whitelisted = new bool[](participants.length);
