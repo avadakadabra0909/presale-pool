@@ -50,7 +50,7 @@ contract PresalePool {
     event FeeInstalled(
         uint _percentage
     );
-    event TokenAddressInstalled(
+    event TokensReceived(
         address _tokenAddress,
         uint _poolTokenBalance
     );
@@ -191,7 +191,7 @@ contract PresalePool {
         token = ERC20(tokenAddress);
         uint tokenBalance = token.balanceOf(address(this));
         require(tokenBalance > 0);
-        TokenAddressInstalled(tokenAddress, tokenBalance);
+        TokensReceived(tokenAddress, tokenBalance);
         changeState(State.TokensReady);
     }
 
