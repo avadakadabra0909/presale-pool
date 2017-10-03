@@ -43,6 +43,34 @@ describe('deploy', () => {
         );
     });
 
+    it('can be deployed with whitelisting enabled', async () => {
+        let admins = [addresses[1], addresses[2]];
+        let buyer1 = addresses[3];
+        let PresalePool = await util.deployContract(
+            web3,
+            "PresalePool",
+            creator,
+            util.createPoolArgs({ admins: admins, enableWhitelist: true })
+        );
+
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.deposit(),
+                buyer1,
+                web3.utils.toWei(3, "ether")
+            )
+        );
+
+        admins.push(creator);
+        for (let i = 0; i < admins.length; i++) {
+            await util.methodWithGas(
+                PresalePool.methods.deposit(),
+                admins[i],
+                web3.utils.toWei(3, "ether")
+            );
+        }
+    });
+
     it('can be deployed without balance', async () => {
         let PresalePool = await util.deployContract(
             web3,

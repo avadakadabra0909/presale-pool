@@ -41,6 +41,7 @@ function createPoolArgs(options) {
     args.push(options.maxContribution || 0);
     args.push(options.maxPoolBalance || 0);
     args.push(options.admins || []);
+    args.push(options.enableWhitelist || false);
 
     return args;
 }

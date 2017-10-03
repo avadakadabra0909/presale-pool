@@ -112,7 +112,16 @@ contract PresalePool {
         locked = false;
     }
 
-    function PresalePool(address _feeManager, uint _feesPercentage, uint _minContribution, uint _maxContribution, uint _maxPoolBalance, address[] _admins) payable {
+    function PresalePool(
+        address _feeManager,
+        uint _feesPercentage,
+        uint _minContribution,
+        uint _maxContribution,
+        uint _maxPoolBalance,
+        address[] _admins,
+        bool _enableWhitelist
+    ) payable
+    {
         AddAdmin(msg.sender);
         admins.push(msg.sender);
 
@@ -122,13 +131,18 @@ contract PresalePool {
         validateContributionSettings();
         ContributionSettingsChanged(minContribution, maxContribution, maxPoolBalance);
 
-        whitelistAll = true;
+        whitelistAll = !_enableWhitelist;
+        if (_enableWhitelist) {
+            whitelistAll = false;
+            balances[msg.sender].whitelisted = true;
+        }
 
         for (uint i = 0; i < _admins.length; i++) {
             var admin = _admins[i];
             if (!isAdmin(admin)) {
                 AddAdmin(admin);
                 admins.push(admin);
+                balances[admin].whitelisted = true;
             }
         }
 
