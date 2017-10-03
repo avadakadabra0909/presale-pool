@@ -22,7 +22,7 @@ contract PresalePool {
 
     address[] public participants;
 
-    bool public whitelistAll;
+    bool public restricted;
 
     struct ParticipantState {
         uint contribution;
@@ -119,7 +119,7 @@ contract PresalePool {
         uint _maxContribution,
         uint _maxPoolBalance,
         address[] _admins,
-        bool _enableWhitelist
+        bool _restricted
     ) payable
     {
         AddAdmin(msg.sender);
@@ -131,11 +131,8 @@ contract PresalePool {
         validateContributionSettings();
         ContributionSettingsChanged(minContribution, maxContribution, maxPoolBalance);
 
-        whitelistAll = !_enableWhitelist;
-        if (_enableWhitelist) {
-            whitelistAll = false;
-            balances[msg.sender].whitelisted = true;
-        }
+        restricted = _restricted;
+        balances[msg.sender].whitelisted = true;
 
         for (uint i = 0; i < _admins.length; i++) {
             var admin = _admins[i];
@@ -292,9 +289,9 @@ contract PresalePool {
     }
 
     function modifyWhitelist(address[] toInclude, address[] toExclude) external onlyAdmins onState(State.Open) {
-        if (whitelistAll) {
+        if (!restricted) {
             WhitelistEnabled();
-            whitelistAll = false;
+            restricted = true;
         }
 
         for (uint i = 0; i < toExclude.length; i++) {
@@ -323,8 +320,8 @@ contract PresalePool {
     }
 
     function removeWhitelist() external onlyAdmins onState(State.Open) {
-        require(!whitelistAll);
-        whitelistAll = true;
+        require(restricted);
+        restricted = false;
         WhitelistDisabled();
 
         includeInWhitelist(participants);
@@ -466,7 +463,7 @@ contract PresalePool {
     }
 
     function included(address participant) internal constant returns (bool) {
-        return whitelistAll || balances[participant].whitelisted;
+        return !restricted || balances[participant].whitelisted;
     }
 
     function getContribution(address participant, uint amount) internal constant returns (uint, uint) {

@@ -50,7 +50,7 @@ describe('deploy', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs({ admins: admins, enableWhitelist: true })
+            util.createPoolArgs({ admins: admins, restricted: true })
         );
 
         await util.expectVMException(
