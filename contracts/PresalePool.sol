@@ -264,47 +264,17 @@ contract PresalePool {
         );
     }
 
-    function transferMyTokens() external onState(State.TokensReady) noReentrancy {
+    function transferMyTokens() external onState(State.TokensReady) {
         uint tokenBalance = token.balanceOf(address(this));
-        require(tokenBalance > 0);
-        var balance = balances[msg.sender];
-
-        uint participantContribution = balance.contribution;
-        uint participantShare = participantContribution * tokenBalance / poolBalance;
-
-        poolBalance -= participantContribution;
-        balance.contribution = 0;
-
-        TokenTransfer(msg.sender, participantShare, true, tokenBalance - participantShare);
-        require(token.transfer(msg.sender, participantShare));
+        transferTokensToRecipient(msg.sender, tokenBalance);
     }
 
-    function transferAllTokens() external onlyAdmins onState(State.TokensReady) noReentrancy {
-        uint tokenBalance = token.balanceOf(address(this));
-        require(tokenBalance > 0);
+    function transferAllTokens() external onlyAdmins onState(State.TokensReady) {
+        transferTokensToRecipients(participants);
+    }
 
-        for (uint i = 0; i < participants.length; i++) {
-            address participant = participants[i];
-            var balance = balances[participants[i]];
-
-            if (balance.contribution > 0) {
-                uint participantShare = balance.contribution * tokenBalance / poolBalance;
-
-                bool succeeded = token.transfer(participant, participantShare);
-                if (succeeded) {
-                    // it's safe to perform these updates after calling token.transfer()
-                    // because we have a noReentrancy modifier on this function
-                    poolBalance -= balance.contribution;
-                    tokenBalance -= participantShare;
-                    balance.contribution = 0;
-                    if (tokenBalance == 0) {
-                        break;
-                    }
-                }
-
-                TokenTransfer(participant, participantShare, succeeded, tokenBalance);
-            }
-        }
+    function transferTokensTo(address[] recipients) external onlyAdmins onState(State.TokensReady) {
+        transferTokensToRecipients(recipients);
     }
 
     function modifyWhitelist(address[] toInclude, address[] toExclude) external onlyAdmins onState(State.Open) {
@@ -429,6 +399,37 @@ contract PresalePool {
     function changeState(State desiredState) internal {
         StateChange(state, desiredState);
         state = desiredState;
+    }
+
+    function transferTokensToRecipients(address[] recipients) internal {
+        uint tokenBalance = token.balanceOf(address(this));
+
+        for (uint i = 0; i < recipients.length; i++) {
+            tokenBalance = transferTokensToRecipient(recipients[i], tokenBalance);
+
+            if (tokenBalance == 0) {
+                break;
+            }
+        }
+    }
+
+    function transferTokensToRecipient(address recipient, uint tokenBalance) internal noReentrancy returns(uint) {
+        var balance = balances[recipient];
+
+        if (balance.contribution > 0) {
+            uint share = balance.contribution * tokenBalance / poolBalance;
+
+            bool succeeded = token.transfer(recipient, share);
+            if (succeeded) {
+                // it's safe to perform these updates after calling token.transfer()
+                // because we have a noReentrancy modifier on this function
+                poolBalance -= balance.contribution;
+                tokenBalance -= share;
+                balance.contribution = 0;
+            }
+            TokenTransfer(recipient, share, succeeded, tokenBalance);
+        }
+        return tokenBalance;
     }
 
     function validateContributionSettings() internal constant {

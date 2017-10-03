@@ -252,7 +252,7 @@ describe('tokens', () => {
         .to.equal("20");
     });
 
-    it("transferMyTokens() fails on blacklisted sender", async () => {
+    it("transferMyTokens() skips blacklisted sender", async () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer1,
@@ -293,11 +293,11 @@ describe('tokens', () => {
 
         // doesn't get anything because buyer2 is not in the pool
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer2);
+        // doesn't get anything because the transfer failed
+        await util.methodWithGas(PresalePool.methods.transferMyTokens(), blacklistedBuyer);
+
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
         expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether");
-        await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.transferMyTokens(), blacklistedBuyer)
-        );
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
         expect(await TestToken.methods.balanceOf(PresalePool.options.address).call())
@@ -310,7 +310,7 @@ describe('tokens', () => {
         .to.equal("0");
     });
 
-    it("transferAllTokens() fails on blacklisted sender", async () => {
+    it("transferAllTokens() skips blacklisted senders", async () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer1,
