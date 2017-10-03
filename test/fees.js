@@ -24,9 +24,9 @@ describe('fees', () => {
     });
 
     it('fees must be less than 50%', async () => {
-        let EPFeeManager = await util.deployContract(
+        let PPFeeManager = await util.deployContract(
             web3,
-            "EPFeeManager",
+            "PPFeeManager",
             creator,
             [[addresses[1].toLowerCase()]]
         );
@@ -37,7 +37,7 @@ describe('fees', () => {
                 creator,
                 util.createPoolArgs({
                     feesPercentage: web3.utils.toWei(0.5, "ether"),
-                    feeManager: EPFeeManager.options.address
+                    feeManager: PPFeeManager.options.address
                 })
             )
         );
@@ -47,7 +47,7 @@ describe('fees', () => {
             creator,
             util.createPoolArgs({
                 feesPercentage: web3.utils.toWei(0.49, "ether"),
-                feeManager: EPFeeManager.options.address
+                feeManager: PPFeeManager.options.address
             })
         );
     });
@@ -69,7 +69,7 @@ describe('fees', () => {
     it('cannot transferFees in open state or failed state', async () => {
         let FeeManager = await util.deployContract(
             web3,
-            "EPFeeManager",
+            "PPFeeManager",
             creator,
             [team]
         );
@@ -118,7 +118,7 @@ describe('fees', () => {
     it('cannot transferFees in paid state', async () => {
         let FeeManager = await util.deployContract(
             web3,
-            "EPFeeManager",
+            "PPFeeManager",
             creator,
             [team]
         );
@@ -159,7 +159,7 @@ describe('fees', () => {
     it('cannot transferFees in failed state from refund', async () => {
         let FeeManager = await util.deployContract(
             web3,
-            "EPFeeManager",
+            "PPFeeManager",
             creator,
             [team]
         );
@@ -206,7 +206,7 @@ describe('fees', () => {
     it('transferFees succeeds on TokensReady state', async () => {
         let FeeManager = await util.deployContract(
             web3,
-            "EPFeeManager",
+            "PPFeeManager",
             creator,
             [team]
         );
@@ -274,7 +274,7 @@ describe('fees', () => {
     it('transferAndDistributeFees succeeds on TokensReady state', async () => {
         let FeeManager = await util.deployContract(
             web3,
-            "EPFeeManager",
+            "PPFeeManager",
             creator,
             [team]
         );

@@ -1,7 +1,7 @@
 pragma solidity ^0.4.15;
 
 
-contract EPFeeManager {
+contract PPFeeManager {
     struct Fees {
         mapping (address => bool) claimed;
         mapping (address => bool) isRecipient;
@@ -16,7 +16,7 @@ contract EPFeeManager {
     mapping (address => uint) public teamBalances;
     uint public teamTotalBalance;
 
-    function EPFeeManager(address[] _epTeam) payable {
+    function PPFeeManager(address[] _epTeam) payable {
         require(_epTeam.length > 0);
         for (uint i = 0; i < _epTeam.length; i++) {
             var addr = _epTeam[i];
