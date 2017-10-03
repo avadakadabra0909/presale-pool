@@ -84,7 +84,7 @@ describe('EPFeeManager', () => {
         }
 
         await util.methodWithGas(
-            FeeManager.methods.distrbuteFees(),
+            FeeManager.methods.distrbuteFees(recipients),
             contractAddress
         );
 
@@ -125,9 +125,8 @@ describe('EPFeeManager', () => {
         );
 
         let fees = await FeeManager.methods.feesForContract(contractAddress).call();
-        expect(
-            parseFloat(fees.numerator) / parseInt(fees.denominator)
-        ).to.be.closeTo(expectedRecipientShare, 0.001);
+        let recipientShare = parseFloat(fees.recipientNumerator) / parseInt(fees.denominator);
+        expect(recipientShare).to.be.closeTo(expectedRecipientShare, 0.001);
 
         return FeeManager;
     }
@@ -297,6 +296,27 @@ describe('EPFeeManager', () => {
             ),
             creator
         );
+
+        await util.expectVMException(
+            util.methodWithGas(
+                FeeManager.methods.create(
+                    web3.utils.toWei(0.1, "ether"),
+                    recipients
+                ),
+                creator
+            )
+        );
+    });
+
+    it('cant include duplicate fee recipients', async () => {
+        let team = [creator];
+        let FeeManager = await util.deployContract(
+            web3,
+            "EPFeeManager",
+            creator,
+            [team]
+        );
+        let recipients = [creator, addresses[3], creator];
 
         await util.expectVMException(
             util.methodWithGas(

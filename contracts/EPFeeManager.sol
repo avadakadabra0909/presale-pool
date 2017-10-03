@@ -5,8 +5,8 @@ contract EPFeeManager {
     struct Fees {
         mapping (address => bool) claimed;
         mapping (address => bool) isRecipient;
-        address[] recipients;
-        uint numerator;
+        uint recipientNumerator;
+        uint numRecipients;
         uint denominator;
         uint amount;
         bool exists;
@@ -34,8 +34,8 @@ contract EPFeeManager {
         require(fees.amount == 0);
         fees.amount = msg.value;
 
-        uint recipientsShare = fees.recipients.length * ((fees.numerator * fees.amount) / fees.denominator);
-        teamTotalBalance += fees.amount - recipientsShare;
+        uint recipientShare = (fees.recipientNumerator * fees.amount) / fees.denominator;
+        teamTotalBalance += fees.amount - fees.numRecipients * recipientShare;
     }
 
     function claimFees(address contractAddress) external {
@@ -43,7 +43,7 @@ contract EPFeeManager {
         require(fees.amount > 0);
         require(fees.isRecipient[msg.sender] && !fees.claimed[msg.sender]);
 
-        uint share = (fees.numerator * fees.amount) / fees.denominator;
+        uint share = (fees.recipientNumerator * fees.amount) / fees.denominator;
         fees.claimed[msg.sender] = true;
 
         require(
@@ -51,14 +51,14 @@ contract EPFeeManager {
         );
     }
 
-    function distrbuteFees() external {
+    function distrbuteFees(address[] recipients) external {
         var fees = feesForContract[msg.sender];
         require(fees.amount > 0);
 
-        uint share = (fees.numerator * fees.amount) / fees.denominator;
+        uint share = (fees.recipientNumerator * fees.amount) / fees.denominator;
 
-        for (uint i = 0; i < fees.recipients.length; i++) {
-            var recipient = fees.recipients[i];
+        for (uint i = 0; i < recipients.length; i++) {
+            var recipient = recipients[i];
             if (!fees.claimed[recipient]) {
                 fees.claimed[recipient] = true;
                 require(
@@ -99,11 +99,11 @@ contract EPFeeManager {
         }
     }
 
-    function create(uint _feesPercentage, address[] _feeRecipients) external {
-        require(_feesPercentage > 0);
-        require(_feeRecipients.length > 0);
+    function create(uint feesPercentage, address[] recipients) external {
+        require(feesPercentage > 0);
+        require(recipients.length > 0);
         // 50 % fee is excessive
-        require(_feesPercentage * 2 < 1 ether);
+        require(feesPercentage * 2 < 1 ether);
         var fees = feesForContract[msg.sender];
         require(!fees.exists);
 
@@ -111,17 +111,19 @@ contract EPFeeManager {
 
         // EP team will get at most 1%
         uint teamPercentage = min(
-            _feesPercentage / (_feeRecipients.length + 1),
+            feesPercentage / (recipients.length + 1),
             1 ether / 100
         );
-        fees.numerator = (_feesPercentage - teamPercentage) / _feeRecipients.length;
-        fees.denominator = _feesPercentage;
-        require(fees.numerator <= fees.denominator);
 
-        for (uint i = 0; i < _feeRecipients.length; i++) {
-            address recipient = _feeRecipients[i];
+        fees.recipientNumerator = (feesPercentage - teamPercentage) / recipients.length;
+        fees.denominator = feesPercentage;
+        fees.numRecipients = recipients.length;
+        require(fees.recipientNumerator + teamPercentage <= fees.denominator);
+
+        for (uint i = 0; i < recipients.length; i++) {
+            address recipient = recipients[i];
+            require(!fees.isRecipient[recipient]);
             fees.isRecipient[recipient] = true;
-            fees.recipients.push(recipient);
         }
     }
 

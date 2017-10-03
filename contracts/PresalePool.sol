@@ -6,8 +6,8 @@ interface ERC20 {
 }
 
 interface FeeManager {
-    function create(uint _feesPercentage, address[] _feeRecipients);
-    function distrbuteFees();
+    function create(uint _feesPercentage, address[] _recipients);
+    function distrbuteFees(address[] _recipients);
 }
 
 contract PresalePool {
@@ -184,7 +184,7 @@ contract PresalePool {
 
     function transferAndDistributeFees() external {
         transferFees();
-        feeManager.distrbuteFees();
+        feeManager.distrbuteFees(admins);
     }
 
     function setToken(address tokenAddress) external onlyAdmins onState(State.Paid) {
