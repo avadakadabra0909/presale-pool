@@ -67,6 +67,30 @@ describe('pay to presale address', () => {
         );
     });
 
+    it("fails if the receiving address does not accept the payment", async () => {
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.payToPresale(PresalePool.options.address, 0),
+                creator
+            )
+        );
+    });
+
+    it("fails if the receiving address uses all the gas", async () => {
+        let GasHungry = await util.deployContract(
+            web3,
+            "GasHungry",
+            creator,
+            []
+        );
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.payToPresale(GasHungry.options.address, 0),
+                creator
+            )
+        );
+    });
+
     it("cant be called more than once", async () => {
         await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator)
 

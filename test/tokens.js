@@ -20,8 +20,7 @@ describe('tokens', () => {
         creator = result.addresses[0].toLowerCase();
         buyer1 = result.addresses[1].toLowerCase();
         buyer2 = result.addresses[2].toLowerCase();
-        payoutAddress = result.addresses[3].toLowerCase();
-        blacklistedBuyer = result.addresses[4].toLowerCase();
+        blacklistedBuyer = result.addresses[3].toLowerCase();
     });
 
 
@@ -44,6 +43,7 @@ describe('tokens', () => {
             creator,
             [blacklistedBuyer]
         );
+        payoutAddress = TestToken.options.address;
     });
 
     it("setToken() cant be called in open or failed state", async () => {
@@ -73,13 +73,6 @@ describe('tokens', () => {
             creator
         );
 
-        await util.methodWithGas(
-            TestToken.methods.transfer(
-                PresalePool.options.address, 60
-            ),
-            creator
-        );
-
         await util.expectVMException(
             util.methodWithGas(
                 PresalePool.methods.setToken(TestToken.options.address),
@@ -100,7 +93,7 @@ describe('tokens', () => {
             web3.utils.toWei(2, "ether")
         );
         await util.methodWithGas(
-            PresalePool.methods.payToPresale(payoutAddress, 0),
+            PresalePool.methods.payToPresale(creator, 0),
             creator
         );
 
@@ -134,7 +127,7 @@ describe('tokens', () => {
                 0, web3.utils.toWei(2, "ether"), web3.utils.toWei(3, "ether")
             ),
             creator
-        )
+        );
         await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
 
         let expectedBalances = {}
@@ -152,13 +145,7 @@ describe('tokens', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
-        await util.methodWithGas(
-            TestToken.methods.transfer(
-                PresalePool.options.address, 60
-            ),
-            creator
-        );
-        expect(await TestToken.methods.balanceOf(creator).call())
+        expect(await TestToken.methods.totalTokens().call())
         .to.equal("940");
 
         await util.methodWithGas(
@@ -176,7 +163,7 @@ describe('tokens', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
         expect(await TestToken.methods.balanceOf(creator).call())
-        .to.equal("980");
+        .to.equal("40");
         expect(await TestToken.methods.balanceOf(buyer1).call())
         .to.equal("20");
     });
@@ -203,7 +190,7 @@ describe('tokens', () => {
                 0, web3.utils.toWei(2, "ether"), web3.utils.toWei(3, "ether")
             ),
             creator
-        )
+        );
         await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
 
         let expectedBalances = {}
@@ -221,13 +208,7 @@ describe('tokens', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
-        await util.methodWithGas(
-            TestToken.methods.transfer(
-                PresalePool.options.address, 60
-            ),
-            creator
-        );
-        expect(await TestToken.methods.balanceOf(creator).call())
+        expect(await TestToken.methods.totalTokens().call())
         .to.equal("940");
 
         await util.methodWithGas(
@@ -247,7 +228,7 @@ describe('tokens', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
         expect(await TestToken.methods.balanceOf(creator).call())
-        .to.equal("980");
+        .to.equal("40");
         expect(await TestToken.methods.balanceOf(buyer1).call())
         .to.equal("20");
     });
@@ -274,7 +255,7 @@ describe('tokens', () => {
                 0, web3.utils.toWei(2, "ether"), web3.utils.toWei(3, "ether")
             ),
             creator
-        )
+        );
         await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
 
         let expectedBalances = {}
@@ -292,13 +273,7 @@ describe('tokens', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
-        await util.methodWithGas(
-            TestToken.methods.transfer(
-                PresalePool.options.address, 60
-            ),
-            creator
-        );
-        expect(await TestToken.methods.balanceOf(creator).call())
+        expect(await TestToken.methods.totalTokens().call())
         .to.equal("940");
 
         await util.methodWithGas(
@@ -324,7 +299,7 @@ describe('tokens', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
         expect(await TestToken.methods.balanceOf(creator).call())
-        .to.equal("980");
+        .to.equal("40");
         expect(await TestToken.methods.balanceOf(buyer1).call())
         .to.equal("20");
     });
@@ -354,13 +329,7 @@ describe('tokens', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
-        await util.methodWithGas(
-            TestToken.methods.transfer(
-                PresalePool.options.address, 60
-            ),
-            creator
-        );
-        expect(await TestToken.methods.balanceOf(creator).call())
+        expect(await TestToken.methods.totalTokens().call())
         .to.equal("940");
 
         await util.methodWithGas(
@@ -412,13 +381,7 @@ describe('tokens', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
-        await util.methodWithGas(
-            TestToken.methods.transfer(
-                PresalePool.options.address, 60
-            ),
-            creator
-        );
-        expect(await TestToken.methods.balanceOf(creator).call())
+        expect(await TestToken.methods.totalTokens().call())
         .to.equal("940");
 
         await util.methodWithGas(

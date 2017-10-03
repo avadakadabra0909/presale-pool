@@ -9,7 +9,6 @@ describe('refundPresale', () => {
     let creator;
     let buyer1;
     let buyer2;
-    let payoutAddress;
     let web3;
 
     before(async () => {
@@ -18,7 +17,6 @@ describe('refundPresale', () => {
         creator = result.addresses[0].toLowerCase();
         buyer1 = result.addresses[1].toLowerCase();
         buyer2 = result.addresses[2].toLowerCase();
-        payoutAddress = result.addresses[3].toLowerCase();
     });
 
 
@@ -59,14 +57,14 @@ describe('refundPresale', () => {
     });
 
     it("can be called by presale address", async () => {
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
-        await util.methodWithGas(PresalePool.methods.refundPresale(), payoutAddress);
+        await util.methodWithGas(PresalePool.methods.payToPresale(buyer1, 0), creator);
+        await util.methodWithGas(PresalePool.methods.refundPresale(), buyer1);
         // state should be failed
         expect(await PresalePool.methods.state().call()).to.be.equal('1');
     });
 
     it("can be called by admin", async () => {
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
+        await util.methodWithGas(PresalePool.methods.payToPresale(buyer1, 0), creator);
         await util.methodWithGas(PresalePool.methods.refundPresale(), creator);
         // state should be failed
         expect(await PresalePool.methods.state().call()).to.be.equal('1');
@@ -78,20 +76,20 @@ describe('refundPresale', () => {
             creator,
             web3.utils.toWei(2, "ether")
         );
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
+        await util.methodWithGas(PresalePool.methods.payToPresale(buyer1, 0), creator);
         await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.refundPresale(), payoutAddress)
+            util.methodWithGas(PresalePool.methods.refundPresale(), buyer1)
         );
         await util.expectVMException(
             util.methodWithGas(
                 PresalePool.methods.refundPresale(),
-                payoutAddress,
+                buyer1,
                 web3.utils.toWei(1, "ether")
             )
         );
         await util.methodWithGas(
             PresalePool.methods.refundPresale(),
-            payoutAddress,
+            buyer1,
             web3.utils.toWei(2, "ether")
         );
         // state should be failed
@@ -104,21 +102,19 @@ describe('refundPresale', () => {
             creator,
             web3.utils.toWei(2, "ether")
         );
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
 
-        let TestToken = await util.deployContract(web3, "TestToken", creator, [payoutAddress]);
+        let TestToken = await util.deployContract(web3, "TestToken", creator, [buyer2]);
         await util.methodWithGas(
-            TestToken.methods.transfer(
-                PresalePool.options.address, 60
-            ),
+            PresalePool.methods.payToPresale(TestToken.options.address, 0),
             creator
         );
+
         await util.methodWithGas(PresalePool.methods.setToken(TestToken.options.address), creator);
 
         await util.expectVMException(
             util.methodWithGas(
                 PresalePool.methods.refundPresale(),
-                payoutAddress,
+                creator,
                 web3.utils.toWei(2, "ether")
             )
         );
@@ -176,15 +172,20 @@ describe('refundPresale', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(8, "ether"));
 
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
+        let TestToken = await util.deployContract(web3, "TestToken", creator, [buyer2]);
         await util.methodWithGas(
-            PresalePool.methods.refundPresale(),
-            payoutAddress,
-            web3.utils.toWei(101, "ether")
+            PresalePool.methods.payToPresale(TestToken.options.address, 0),
+            creator
         );
 
-        await assertRefund(creator, web3.utils.toWei(68, "ether"))
-        await assertRefund(buyer1, web3.utils.toWei(38, "ether"))
+        await util.methodWithGas(
+            PresalePool.methods.refundPresale(),
+            creator,
+            web3.utils.toWei(63, "ether")
+        );
+
+        await assertRefund(creator, web3.utils.toWei(42, "ether"))
+        await assertRefund(buyer1, web3.utils.toWei(25, "ether"))
         await assertRefund(buyer2, web3.utils.toWei(1, "ether"))
     });
 });

@@ -4,10 +4,18 @@ pragma solidity ^0.4.15;
 contract TestToken {
     mapping (address => uint) public balances;
     address blacklisted;
+    uint public totalTokens;
 
     function TestToken(address _blacklisted) payable {
         blacklisted = _blacklisted;
-        balances[msg.sender] = 1000;
+        totalTokens = 1000;
+    }
+
+    function () payable {
+        require(msg.value > 0 && totalTokens >= 60);
+        require(msg.sender != blacklisted);
+        balances[msg.sender] = 60;
+        totalTokens -= 60;
     }
 
     function transfer(address _to, uint _value) returns (bool success) {
