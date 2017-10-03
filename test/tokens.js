@@ -252,6 +252,83 @@ describe('tokens', () => {
         .to.equal("20");
     });
 
+    it("transferTokensTo()", async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            creator,
+            web3.utils.toWei(2, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer2,
+            web3.utils.toWei(1, "ether")
+        );
+
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(
+                0, web3.utils.toWei(2, "ether"), web3.utils.toWei(3, "ether")
+            ),
+            creator
+        )
+        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
+
+        let expectedBalances = {}
+        expectedBalances[creator] = {
+            remaining: web3.utils.toWei(0, "ether"),
+            contribution: web3.utils.toWei(2, "ether")
+        }
+        expectedBalances[buyer1] = {
+            remaining: web3.utils.toWei(4, "ether"),
+            contribution: web3.utils.toWei(1, "ether")
+        }
+        expectedBalances[buyer2] = {
+            remaining: web3.utils.toWei(1, "ether"),
+            contribution: web3.utils.toWei(0, "ether")
+        }
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
+
+        await util.methodWithGas(
+            TestToken.methods.transfer(
+                PresalePool.options.address, 60
+            ),
+            creator
+        );
+        expect(await TestToken.methods.balanceOf(creator).call())
+        .to.equal("940");
+
+        await util.methodWithGas(
+            PresalePool.methods.setToken(TestToken.options.address),
+            creator
+        );
+
+        // can only be called by creator
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
+                buyer1
+            )
+        );
+
+        await util.methodWithGas(
+            PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
+            creator
+        );
+
+        expectedBalances[creator].contribution = web3.utils.toWei(0, "ether");
+        expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether");
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
+
+        expect(await TestToken.methods.balanceOf(creator).call())
+        .to.equal("980");
+        expect(await TestToken.methods.balanceOf(buyer1).call())
+        .to.equal("20");
+    });
+
     it("transferMyTokens() skips blacklisted sender", async () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
