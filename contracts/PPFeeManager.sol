@@ -12,16 +12,16 @@ contract PPFeeManager {
         bool exists;
     }
     mapping (address => Fees) public feesForContract;
-    address[] public epTeam;
+    address[] public teamMembers;
     mapping (address => uint) public teamBalances;
     uint public teamTotalBalance;
 
-    function PPFeeManager(address[] _epTeam) payable {
-        require(_epTeam.length > 0);
-        for (uint i = 0; i < _epTeam.length; i++) {
-            var addr = _epTeam[i];
+    function PPFeeManager(address[] _teamMembers) payable {
+        require(_teamMembers.length > 0);
+        for (uint i = 0; i < _teamMembers.length; i++) {
+            var addr = _teamMembers[i];
             if (!inTeam(addr)) {
-                epTeam.push(addr);
+                teamMembers.push(addr);
             }
         }
         teamTotalBalance = msg.value;
@@ -78,10 +78,10 @@ contract PPFeeManager {
 
     function splitTeamFees() public {
         bool isTeamMember = false;
-        uint sharePerMember = teamTotalBalance / epTeam.length;
-        for (uint i = 0; i < epTeam.length; i++) {
-            isTeamMember = isTeamMember || msg.sender == epTeam[i];
-            teamBalances[epTeam[i]] += sharePerMember;
+        uint sharePerMember = teamTotalBalance / teamMembers.length;
+        for (uint i = 0; i < teamMembers.length; i++) {
+            isTeamMember = isTeamMember || msg.sender == teamMembers[i];
+            teamBalances[teamMembers[i]] += sharePerMember;
             teamTotalBalance -= sharePerMember;
         }
         require(isTeamMember);
@@ -89,8 +89,8 @@ contract PPFeeManager {
 
     function splitAndDistributeTeamFees() external {
         splitTeamFees();
-        for (uint i = 0; i < epTeam.length; i++) {
-            address member = epTeam[i];
+        for (uint i = 0; i < teamMembers.length; i++) {
+            address member = teamMembers[i];
             uint amount = teamBalances[member];
             teamBalances[member] = 0;
             require(
@@ -128,8 +128,8 @@ contract PPFeeManager {
     }
 
     function inTeam(address addr) internal constant returns (bool) {
-        for (uint i = 0; i < epTeam.length; i++) {
-            if (epTeam[i] == addr) {
+        for (uint i = 0; i < teamMembers.length; i++) {
+            if (teamMembers[i] == addr) {
                 return true;
             }
         }

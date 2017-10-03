@@ -212,10 +212,10 @@ describe('PPFeeManager', () => {
             [team]
         );
 
-        addressEquals(await FeeManager.methods.epTeam(0).call(), creator);
-        addressEquals(await FeeManager.methods.epTeam(1).call(), addresses[1]);
+        addressEquals(await FeeManager.methods.teamMembers(0).call(), creator);
+        addressEquals(await FeeManager.methods.teamMembers(1).call(), addresses[1]);
         await util.expectVMException(
-            FeeManager.methods.epTeam(2).call()
+            FeeManager.methods.teamMembers(2).call()
         );
     });
 
