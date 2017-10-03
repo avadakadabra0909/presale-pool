@@ -5,7 +5,7 @@ const util = require('./util');
 
 const expect = chai.expect;
 
-describe('deploy', () => {
+describe('fees', () => {
     let creator;
     let addresses;
     let web3;
@@ -115,7 +115,7 @@ describe('deploy', () => {
         );
     });
 
-    it('cannot transferFees in paid state when still refundable', async () => {
+    it('cannot transferFees in paid state', async () => {
         let FeeManager = await util.deployContract(
             web3,
             "EPFeeManager",
@@ -130,13 +130,6 @@ describe('deploy', () => {
                 feesPercentage: web3.utils.toWei(0.2, "ether"),
                 feeManager: FeeManager.options.address
             })
-        );
-        let blacklistedBuyer = addresses[2];
-        let TestToken = await util.deployContract(
-            web3,
-            "TestToken",
-            creator,
-            [blacklistedBuyer]
         );
 
         await util.methodWithGas(
@@ -163,7 +156,54 @@ describe('deploy', () => {
         );
     });
 
-    it('transferFees succeeds', async () => {
+    it('cannot transferFees in failed state from refund', async () => {
+        let FeeManager = await util.deployContract(
+            web3,
+            "EPFeeManager",
+            creator,
+            [team]
+        );
+        let PresalePool = await util.deployContract(
+            web3,
+            "PresalePool",
+            creator,
+            util.createPoolArgs({
+                feesPercentage: web3.utils.toWei(0.2, "ether"),
+                feeManager: FeeManager.options.address
+            })
+        );
+
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            creator,
+            web3.utils.toWei(2, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.payToPresale(payoutAddress, 0),
+            creator
+        );
+
+        await util.methodWithGas(
+            PresalePool.methods.refundPresale(),
+            payoutAddress,
+            web3.utils.toWei(101, "ether")
+        );
+
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.transferFees(),
+                creator
+            )
+        );
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.transferAndDistributeFees(),
+                creator
+            )
+        );
+    });
+
+    it('transferFees succeeds on TokensReady state', async () => {
         let FeeManager = await util.deployContract(
             web3,
             "EPFeeManager",
@@ -197,15 +237,13 @@ describe('deploy', () => {
             creator
         );
 
-        await util.methodWithGas(PresalePool.methods.setToken(TestToken.options.address), creator);
         await util.methodWithGas(
             TestToken.methods.transfer(
                 PresalePool.options.address, 60
             ),
             creator
         );
-
-        await util.methodWithGas(PresalePool.methods.transferMyTokens(), creator);
+        await util.methodWithGas(PresalePool.methods.setToken(TestToken.options.address), creator);
 
         let expectedPayout = web3.utils.toWei(2*.02, "ether");
         let beforeBalance = await web3.eth.getBalance(FeeManager.options.address);
@@ -233,7 +271,7 @@ describe('deploy', () => {
         );
     });
 
-    it('transferAndDistributeFees succeeds', async () => {
+    it('transferAndDistributeFees succeeds on TokensReady state', async () => {
         let FeeManager = await util.deployContract(
             web3,
             "EPFeeManager",
@@ -267,15 +305,13 @@ describe('deploy', () => {
             creator
         );
 
-        await util.methodWithGas(PresalePool.methods.setToken(TestToken.options.address), creator);
         await util.methodWithGas(
             TestToken.methods.transfer(
                 PresalePool.options.address, 60
             ),
             creator
         );
-
-        await util.methodWithGas(PresalePool.methods.transferMyTokens(), creator);
+        await util.methodWithGas(PresalePool.methods.setToken(TestToken.options.address), creator);
 
         let expectedPayout = web3.utils.toWei(0.02, "ether");
         let beforeBalance = await web3.eth.getBalance(creator);

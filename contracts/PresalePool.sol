@@ -11,7 +11,7 @@ interface FeeManager {
 }
 
 contract PresalePool {
-    enum State { Open, Failed, Paid }
+    enum State { Open, Failed, Paid, TokensReady }
     State public state;
 
     address[] public admins;
@@ -34,10 +34,10 @@ contract PresalePool {
     uint public poolBalance;
 
     address public presaleAddress;
-    bool public refundable;
     uint public gasFundBalance;
 
     ERC20 public token;
+
     FeeManager public feeManager;
     uint public totalFees;
     uint public feesPercentage;
@@ -158,7 +158,6 @@ contract PresalePool {
         require(poolBalance >= minPoolBalance);
         changeState(State.Paid);
         presaleAddress = _presaleAddress;
-        refundable = true;
         if (feesPercentage > 0) {
             totalFees = (poolBalance * feesPercentage) / 1 ether;
         }
@@ -168,14 +167,14 @@ contract PresalePool {
     }
 
     function refundPresale() payable external onState(State.Paid) {
-        require(refundable && msg.value >= poolBalance);
+        require(msg.value >= poolBalance);
         require(msg.sender == presaleAddress || isAdmin(msg.sender));
         gasFundBalance = msg.value - poolBalance;
         changeState(State.Failed);
     }
 
-    function transferFees() public onState(State.Paid) {
-        require(!refundable && totalFees > 0);
+    function transferFees() public onState(State.TokensReady) {
+        require(totalFees > 0);
         uint amount = totalFees;
         totalFees = 0;
         require(
@@ -188,9 +187,12 @@ contract PresalePool {
         feeManager.distrbuteFees();
     }
 
-    function setToken(address tokenAddress) external onlyAdmins {
+    function setToken(address tokenAddress) external onlyAdmins onState(State.Paid) {
         token = ERC20(tokenAddress);
-        TokenAddressInstalled(tokenAddress, token.balanceOf(address(this)));
+        uint tokenBalance = token.balanceOf(address(this));
+        require(tokenBalance > 0);
+        TokenAddressInstalled(tokenAddress, tokenBalance);
+        changeState(State.TokensReady);
     }
 
     function deposit() payable public onState(State.Open) {
@@ -229,8 +231,6 @@ contract PresalePool {
             }
             poolBalance -= balance.contribution;
             balance.contribution = 0;
-        } else {
-            require(state == State.Paid);
         }
 
         Withdrawl(msg.sender, total, 0, 0, poolBalance);
@@ -264,7 +264,7 @@ contract PresalePool {
         );
     }
 
-    function transferMyTokens() external onState(State.Paid) noReentrancy {
+    function transferMyTokens() external onState(State.TokensReady) noReentrancy {
         uint tokenBalance = token.balanceOf(address(this));
         require(tokenBalance > 0);
         var balance = balances[msg.sender];
@@ -274,13 +274,12 @@ contract PresalePool {
 
         poolBalance -= participantContribution;
         balance.contribution = 0;
-        refundable = false;
 
         TokenTransfer(msg.sender, participantShare, true, tokenBalance - participantShare);
         require(token.transfer(msg.sender, participantShare));
     }
 
-    function transferAllTokens() external onlyAdmins onState(State.Paid) noReentrancy {
+    function transferAllTokens() external onlyAdmins onState(State.TokensReady) noReentrancy {
         uint tokenBalance = token.balanceOf(address(this));
         require(tokenBalance > 0);
 
@@ -298,7 +297,6 @@ contract PresalePool {
                     poolBalance -= balance.contribution;
                     tokenBalance -= participantShare;
                     balance.contribution = 0;
-                    refundable = false;
                     if (tokenBalance == 0) {
                         break;
                     }

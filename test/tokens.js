@@ -44,15 +44,71 @@ describe('tokens', () => {
             creator,
             [blacklistedBuyer]
         );
+    });
+
+    it("setToken() cant be called in open or failed state", async () => {
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.setToken(TestToken.options.address),
+                creator
+            )
+        );
+        await util.methodWithGas(PresalePool.methods.fail(), creator)
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.setToken(TestToken.options.address),
+                creator
+            )
+        );
+    });
+
+    it("setToken() can only be called by creator", async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            creator,
+            web3.utils.toWei(2, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.payToPresale(payoutAddress, 0),
+            creator
+        );
+
+        await util.methodWithGas(
+            TestToken.methods.transfer(
+                PresalePool.options.address, 60
+            ),
+            creator
+        );
+
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.setToken(TestToken.options.address),
+                buyer1
+            )
+        );
+
         await util.methodWithGas(
             PresalePool.methods.setToken(TestToken.options.address),
             creator
         );
     });
 
-    it("setToken() can only be called by creator", async () => {
+    it("setToken() can only be called when there are tokens deposited in the contract", async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            creator,
+            web3.utils.toWei(2, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.payToPresale(payoutAddress, 0),
+            creator
+        );
+
         await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.setToken(TestToken.options.address), buyer1)
+            util.methodWithGas(
+                PresalePool.methods.setToken(TestToken.options.address),
+                creator
+            )
         );
     });
 
@@ -104,6 +160,11 @@ describe('tokens', () => {
         );
         expect(await TestToken.methods.balanceOf(creator).call())
         .to.equal("940");
+
+        await util.methodWithGas(
+            PresalePool.methods.setToken(TestToken.options.address),
+            creator
+        );
 
         // calling transferMyTokens() doesn't give you more tokens
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
@@ -169,6 +230,11 @@ describe('tokens', () => {
         expect(await TestToken.methods.balanceOf(creator).call())
         .to.equal("940");
 
+        await util.methodWithGas(
+            PresalePool.methods.setToken(TestToken.options.address),
+            creator
+        );
+
         // can only be called by creator
         await util.expectVMException(
             util.methodWithGas(PresalePool.methods.transferAllTokens(), buyer1)
@@ -219,6 +285,11 @@ describe('tokens', () => {
         );
         expect(await TestToken.methods.balanceOf(creator).call())
         .to.equal("940");
+
+        await util.methodWithGas(
+            PresalePool.methods.setToken(TestToken.options.address),
+            creator
+        );
 
         // doesn't get anything because buyer2 is not in the pool
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer2);
@@ -272,6 +343,11 @@ describe('tokens', () => {
         );
         expect(await TestToken.methods.balanceOf(creator).call())
         .to.equal("940");
+
+        await util.methodWithGas(
+            PresalePool.methods.setToken(TestToken.options.address),
+            creator
+        );
 
         await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
         expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether");

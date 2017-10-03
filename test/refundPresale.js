@@ -98,7 +98,7 @@ describe('refundPresale', () => {
         expect(await PresalePool.methods.state().call()).to.be.equal('1');
     });
 
-    it("cant be called after tokens have already been redeemed", async () => {
+    it("cant be called in TokensReady state", async () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
@@ -107,15 +107,14 @@ describe('refundPresale', () => {
         await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator);
 
         let TestToken = await util.deployContract(web3, "TestToken", creator, [payoutAddress]);
-        await util.methodWithGas(PresalePool.methods.setToken(TestToken.options.address), creator);
         await util.methodWithGas(
             TestToken.methods.transfer(
                 PresalePool.options.address, 60
             ),
             creator
         );
+        await util.methodWithGas(PresalePool.methods.setToken(TestToken.options.address), creator);
 
-        await util.methodWithGas(PresalePool.methods.transferMyTokens(), creator);
         await util.expectVMException(
             util.methodWithGas(
                 PresalePool.methods.refundPresale(),
