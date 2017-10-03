@@ -279,6 +279,41 @@ describe('PPFeeManager', () => {
         );
     });
 
+    it('must have less than 5 recipients', async () => {
+        let team = [creator];
+        let FeeManager = await util.deployContract(
+            web3,
+            "PPFeeManager",
+            creator,
+            [team]
+        );
+
+        let recipients = [
+            addresses[0],
+            addresses[1],
+            addresses[2],
+            addresses[3],
+        ];
+        await util.methodWithGas(
+            FeeManager.methods.create(
+                web3.utils.toWei(0.1, "ether"),
+                recipients
+            ),
+            creator
+        );
+
+        recipients.push(addresses[4]);
+        await util.expectVMException(
+            util.methodWithGas(
+                FeeManager.methods.create(
+                    web3.utils.toWei(0.1, "ether"),
+                    recipients
+                ),
+                creator
+            )
+        );
+    });
+
     it('can only create fee structure once', async () => {
         let team = [creator];
         let FeeManager = await util.deployContract(

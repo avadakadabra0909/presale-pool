@@ -101,7 +101,7 @@ contract PPFeeManager {
 
     function create(uint feesPercentage, address[] recipients) external {
         require(feesPercentage > 0);
-        require(recipients.length > 0);
+        require(recipients.length > 0 && recipients.length < 5);
         // 50 % fee is excessive
         require(feesPercentage * 2 < 1 ether);
         var fees = feesForContract[msg.sender];
