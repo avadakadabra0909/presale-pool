@@ -19,8 +19,8 @@ describe('open state', () => {
         buyer2 = result.addresses[2].toLowerCase();
     });
 
-    after(() => {
-        server.tearDown();
+    after(async () => {
+        await server.tearDown();
     });
 
     let PresalePool;

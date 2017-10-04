@@ -23,8 +23,8 @@ describe('pay to presale address', () => {
     });
 
 
-    after(() => {
-        server.tearDown();
+    after(async () => {
+        await server.tearDown();
     });
 
     let PresalePool;

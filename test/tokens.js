@@ -24,8 +24,8 @@ describe('tokens', () => {
     });
 
 
-    after(() => {
-        server.tearDown();
+    after(async () => {
+        await server.tearDown();
     });
 
     let PresalePool;

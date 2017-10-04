@@ -19,8 +19,8 @@ describe('fees', () => {
         addresses = result.addresses;
     });
 
-    after(() => {
-        server.tearDown();
+    after(async () => {
+        await server.tearDown();
     });
 
     it('fees must be less than 50%', async () => {
@@ -29,6 +29,15 @@ describe('fees', () => {
             "PPFeeManager",
             creator,
             [[addresses[1].toLowerCase()]]
+        );
+        await util.deployContract(
+            web3,
+            "PresalePool",
+            creator,
+            util.createPoolArgs({
+                feesPercentage: web3.utils.toWei(0.49, "ether"),
+                feeManager: PPFeeManager.options.address
+            })
         );
         await util.expectVMException(
             util.deployContract(
@@ -40,15 +49,6 @@ describe('fees', () => {
                     feeManager: PPFeeManager.options.address
                 })
             )
-        );
-        await util.deployContract(
-            web3,
-            "PresalePool",
-            creator,
-            util.createPoolArgs({
-                feesPercentage: web3.utils.toWei(0.49, "ether"),
-                feeManager: PPFeeManager.options.address
-            })
         );
     });
 

@@ -4,17 +4,37 @@ const solc = require('solc')
 
 const expect = chai.expect;
 
-let cache = {};
-
-async function deployContract(web3, contractName, creatorAddress, contractArgs, initialBalance) {
-    if (!cache[contractName]) {
-        let source = fs.readFileSync(`./contracts/${contractName}.sol`, 'utf8');
-        cache[contractName] = solc.compile(
-            source, 1
-        ).contracts[`:${contractName}`];
+function findImports (name) {
+    let path = `./contracts/${name}`;
+    try {
+        let source = fs.readFileSync(path, 'utf8');
+        return { contents: source };
+    } catch (error) {
+        return { error: 'File not found' };
     }
-    let compiledContract = cache[contractName];
+}
 
+// already toplogically sorted
+let libs = ["Util", "Fraction", "TokenCounter"];
+
+function compileContract(contractName) {
+    let content = fs.readFileSync(`./contracts/${contractName}.sol`, 'utf8');
+    let = key = `${contractName}.sol`;
+    let input = {};
+    input[key] = content;
+
+    let result = solc.compile(
+        { sources: input }, 1, findImports
+    );
+
+    return result;
+}
+
+function contractNameToKey(contractName) {
+    return `${contractName}.sol:${contractName}`;
+}
+
+async function deployCompiledContract(web3, compiledContract, creatorAddress, contractArgs, initialBalance) {
     let abi = compiledContract.interface;
     let bytecode = compiledContract.bytecode;
     let Contract = new web3.eth.Contract(JSON.parse(abi));
@@ -29,7 +49,27 @@ async function deployContract(web3, contractName, creatorAddress, contractArgs, 
         value: initialBalance
     };
 
-    return deploy.send(sendOptions);
+    return await deploy.send(sendOptions);
+}
+
+
+async function deployContract(web3, contractName, creatorAddress, contractArgs, initialBalance) {
+    let result = compileContract(contractName);
+    let compiledContract = result.contracts[contractNameToKey(contractName)];
+    let libMapping = {};
+
+    for (let i= 0; i < libs.length; i++) {
+        let key = contractNameToKey(libs[i]);
+        let compiledLib = result.contracts[key];
+        if (compiledLib) {
+            let deployedLib = await deployCompiledContract(web3, compiledLib, creatorAddress, []);
+            libMapping[key] = deployedLib.options.address;
+        }
+    }
+
+    compiledContract.bytecode = solc.linkBytecode(compiledContract.bytecode, libMapping);
+
+    return await deployCompiledContract(web3, compiledContract, creatorAddress, contractArgs, initialBalance);
 }
 
 function createPoolArgs(options) {

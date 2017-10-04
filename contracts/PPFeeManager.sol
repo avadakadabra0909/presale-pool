@@ -1,13 +1,16 @@
 pragma solidity ^0.4.15;
 
+import "./Util.sol";
+import "./Fraction.sol";
 
 contract PPFeeManager {
+    using Fraction for uint[2];
+
     struct Fees {
         mapping (address => bool) claimed;
         mapping (address => bool) isRecipient;
-        uint recipientNumerator;
+        uint[2] recipientFraction;
         uint numRecipients;
-        uint denominator;
         uint amount;
         bool exists;
     }
@@ -19,8 +22,8 @@ contract PPFeeManager {
     function PPFeeManager(address[] _teamMembers) payable {
         require(_teamMembers.length > 0);
         for (uint i = 0; i < _teamMembers.length; i++) {
-            var addr = _teamMembers[i];
-            if (!inTeam(addr)) {
+            address addr = _teamMembers[i];
+            if (!Util.contains(teamMembers, addr)) {
                 teamMembers.push(addr);
             }
         }
@@ -29,21 +32,33 @@ contract PPFeeManager {
 
     function () payable {
         require(msg.value > 0);
-        var fees = feesForContract[msg.sender];
+        Fees storage fees = feesForContract[msg.sender];
         require(fees.exists);
         require(fees.amount == 0);
         fees.amount = msg.value;
 
-        uint recipientShare = (fees.recipientNumerator * fees.amount) / fees.denominator;
+        uint recipientShare = fees.recipientFraction.shareOf(fees.amount);
         teamTotalBalance += fees.amount - fees.numRecipients * recipientShare;
     }
 
+    // used only for tests
+    function getFees(address contractAddress) public returns(uint, uint, uint, uint, bool) {
+        Fees storage fees = feesForContract[contractAddress];
+        return (
+            fees.recipientFraction[0],
+            fees.recipientFraction[1],
+            fees.numRecipients,
+            fees.amount,
+            fees.exists
+        );
+    }
+
     function claimFees(address contractAddress) external {
-        var fees = feesForContract[contractAddress];
+        Fees storage fees = feesForContract[contractAddress];
         require(fees.amount > 0);
         require(fees.isRecipient[msg.sender] && !fees.claimed[msg.sender]);
 
-        uint share = (fees.recipientNumerator * fees.amount) / fees.denominator;
+        uint share = fees.recipientFraction.shareOf(fees.amount);
         fees.claimed[msg.sender] = true;
 
         require(
@@ -52,13 +67,13 @@ contract PPFeeManager {
     }
 
     function distrbuteFees(address[] recipients) external {
-        var fees = feesForContract[msg.sender];
+        Fees storage fees = feesForContract[msg.sender];
         require(fees.amount > 0);
 
-        uint share = (fees.recipientNumerator * fees.amount) / fees.denominator;
+        uint share = fees.recipientFraction.shareOf(fees.amount);
 
         for (uint i = 0; i < recipients.length; i++) {
-            var recipient = recipients[i];
+            address recipient = recipients[i];
             if (!fees.claimed[recipient]) {
                 fees.claimed[recipient] = true;
                 require(
@@ -99,47 +114,34 @@ contract PPFeeManager {
         }
     }
 
-    function create(uint feesPercentage, address[] recipients) external {
-        require(feesPercentage > 0);
-        require(recipients.length > 0 && recipients.length < 5);
+    function create(uint feesPerEther, address[] recipients) external {
+        require(feesPerEther > 0);
         // 50 % fee is excessive
-        require(feesPercentage * 2 < 1 ether);
-        var fees = feesForContract[msg.sender];
+        require(feesPerEther * 2 < 1 ether);
+        require(recipients.length > 0 && recipients.length < 5);
+
+        Fees storage fees = feesForContract[msg.sender];
         require(!fees.exists);
 
         fees.exists = true;
 
         // EP team will get at most 1%
-        uint teamPercentage = min(
-            feesPercentage / (recipients.length + 1),
+        uint teamPercentage = Util.min(
+            feesPerEther / (recipients.length + 1),
             1 ether / 100
         );
 
-        fees.recipientNumerator = (feesPercentage - teamPercentage) / recipients.length;
-        fees.denominator = feesPercentage;
+        fees.recipientFraction = [
+            (feesPerEther - teamPercentage) / recipients.length, // numerator
+            feesPerEther // denominator
+        ];
         fees.numRecipients = recipients.length;
-        require(fees.recipientNumerator + teamPercentage <= fees.denominator);
+        require(fees.recipientFraction[0] + teamPercentage <= fees.recipientFraction[1]);
 
         for (uint i = 0; i < recipients.length; i++) {
             address recipient = recipients[i];
             require(!fees.isRecipient[recipient]);
             fees.isRecipient[recipient] = true;
         }
-    }
-
-    function inTeam(address addr) internal constant returns (bool) {
-        for (uint i = 0; i < teamMembers.length; i++) {
-            if (teamMembers[i] == addr) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function min(uint a, uint b) internal pure returns (uint _min) {
-        if (a < b) {
-            return a;
-        }
-        return b;
     }
 }

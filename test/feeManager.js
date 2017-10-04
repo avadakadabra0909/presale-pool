@@ -17,8 +17,8 @@ describe('PPFeeManager', () => {
         addresses = result.addresses.map((s) => s.toLowerCase());
     });
 
-    after(() => {
-        server.tearDown();
+    after(async () => {
+        await server.tearDown();
     });
 
     function addressEquals(a, b) {
@@ -124,8 +124,10 @@ describe('PPFeeManager', () => {
             contractAddress
         );
 
-        let fees = await FeeManager.methods.feesForContract(contractAddress).call();
-        let recipientShare = parseFloat(fees.recipientNumerator) / parseInt(fees.denominator);
+        let fees = await FeeManager.methods.getFees(contractAddress).call();
+        let recipientNumerator = fees[0];
+        let denominator = fees[1];
+        let recipientShare = parseFloat(recipientNumerator) / parseInt(denominator);
         expect(recipientShare).to.be.closeTo(expectedRecipientShare, 0.001);
 
         return FeeManager;

@@ -17,8 +17,8 @@ describe('deploy', () => {
         addresses = result.addresses;
     });
 
-    after(() => {
-        server.tearDown();
+    after(async () => {
+        await server.tearDown();
     });
 
     it('can be deployed with multiple admins', async () => {

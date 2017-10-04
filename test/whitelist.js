@@ -20,8 +20,8 @@ describe('whitelist', () => {
         buyer3 = result.addresses[3].toLowerCase();
     });
 
-    after(() => {
-        server.tearDown();
+    after(async () => {
+        await server.tearDown();
     });
 
     let PresalePool;

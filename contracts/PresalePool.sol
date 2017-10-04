@@ -1,12 +1,14 @@
 pragma solidity ^0.4.15;
 
+import "./Util.sol";
+
 interface ERC20 {
     function transfer(address _to, uint _value) returns (bool success);
     function balanceOf(address _owner) constant returns (uint balance);
 }
 
 interface FeeManager {
-    function create(uint _feesPercentage, address[] _recipients);
+    function create(uint _feesPerEther, address[] _recipients);
     function distrbuteFees(address[] _recipients);
 }
 
@@ -40,7 +42,7 @@ contract PresalePool {
 
     FeeManager public feeManager;
     uint public totalFees;
-    uint public feesPercentage;
+    uint public feesPerEther;
 
     event Deposit(
         address indexed _from,
@@ -95,7 +97,7 @@ contract PresalePool {
     );
 
     modifier onlyAdmins() {
-        require(isAdmin(msg.sender));
+        require(Util.contains(admins, msg.sender));
         _;
     }
 
@@ -114,7 +116,7 @@ contract PresalePool {
 
     function PresalePool(
         address _feeManager,
-        uint _feesPercentage,
+        uint _feesPerEther,
         uint _minContribution,
         uint _maxContribution,
         uint _maxPoolBalance,
@@ -135,21 +137,21 @@ contract PresalePool {
         balances[msg.sender].whitelisted = true;
 
         for (uint i = 0; i < _admins.length; i++) {
-            var admin = _admins[i];
-            if (!isAdmin(admin)) {
+            address admin = _admins[i];
+            if (!Util.contains(admins, admin)) {
                 AddAdmin(admin);
                 admins.push(admin);
                 balances[admin].whitelisted = true;
             }
         }
 
-        feesPercentage = _feesPercentage;
-        FeeInstalled(feesPercentage);
-        if (feesPercentage > 0) {
+        feesPerEther = _feesPerEther;
+        FeeInstalled(feesPerEther);
+        if (feesPerEther > 0) {
             feeManager = FeeManager(_feeManager);
             // 50 % fee is excessive
-            require(feesPercentage * 2 < 1 ether);
-            feeManager.create(feesPercentage, admins);
+            require(feesPerEther * 2 < 1 ether);
+            feeManager.create(feesPerEther, admins);
         }
 
         if (msg.value > 0) {
@@ -169,8 +171,8 @@ contract PresalePool {
         require(poolBalance >= minPoolBalance);
         changeState(State.Paid);
         presaleAddress = _presaleAddress;
-        if (feesPercentage > 0) {
-            totalFees = (poolBalance * feesPercentage) / 1 ether;
+        if (feesPerEther > 0) {
+            totalFees = (poolBalance * feesPerEther) / 1 ether;
         }
         require(
             presaleAddress.call.value(poolBalance - totalFees)()
@@ -179,7 +181,7 @@ contract PresalePool {
 
     function refundPresale() payable external onState(State.Paid) {
         require(msg.value >= poolBalance);
-        require(msg.sender == presaleAddress || isAdmin(msg.sender));
+        require(msg.sender == presaleAddress || Util.contains(admins, msg.sender));
         gasFundBalance = msg.value - poolBalance;
         changeState(State.Failed);
     }
@@ -216,7 +218,7 @@ contract PresalePool {
         // must respect the maxContribution and maxPoolBalance limits
         require(newRemaining == 0);
 
-        var balance = balances[msg.sender];
+        ParticipantState storage balance = balances[msg.sender];
         poolBalance = poolBalance - balance.contribution + newContribution;
         (balance.contribution, balance.remaining) = (newContribution, newRemaining);
 
@@ -229,7 +231,7 @@ contract PresalePool {
     }
 
     function withdrawAll() external {
-        var balance = balances[msg.sender];
+        ParticipantState storage balance = balances[msg.sender];
         uint total = balance.remaining;
         balance.remaining = 0;
 
@@ -251,7 +253,7 @@ contract PresalePool {
     }
 
     function withdraw(uint amount) external onState(State.Open) {
-        var balance = balances[msg.sender];
+        ParticipantState storage balance = balances[msg.sender];
         uint total = balance.remaining + balance.contribution;
         require(total >= amount && amount >= balance.remaining);
 
@@ -281,11 +283,27 @@ contract PresalePool {
     }
 
     function transferAllTokens() external onlyAdmins onState(State.TokensReady) {
-        transferTokensToRecipients(participants);
+        uint tokenBalance = token.balanceOf(address(this));
+
+        for (uint i = 0; i < participants.length; i++) {
+            tokenBalance = transferTokensToRecipient(participants[i], tokenBalance);
+
+            if (tokenBalance == 0) {
+                break;
+            }
+        }
     }
 
     function transferTokensTo(address[] recipients) external onlyAdmins onState(State.TokensReady) {
-        transferTokensToRecipients(recipients);
+        uint tokenBalance = token.balanceOf(address(this));
+
+        for (uint i = 0; i < recipients.length; i++) {
+            tokenBalance = transferTokensToRecipient(recipients[i], tokenBalance);
+
+            if (tokenBalance == 0) {
+                break;
+            }
+        }
     }
 
     function modifyWhitelist(address[] toInclude, address[] toExclude) external onlyAdmins onState(State.Open) {
@@ -293,10 +311,11 @@ contract PresalePool {
             WhitelistEnabled();
             restricted = true;
         }
+        uint i = 0;
 
-        for (uint i = 0; i < toExclude.length; i++) {
+        for (i = 0; i < toExclude.length; i++) {
             address participant = toExclude[i];
-            var balance = balances[participant];
+            ParticipantState storage balance = balances[participant];
 
             if (balance.whitelisted) {
                 balance.whitelisted = false;
@@ -316,7 +335,9 @@ contract PresalePool {
             }
         }
 
-        includeInWhitelist(toInclude);
+        for (i = 0; i < toInclude.length; i++) {
+            includeInWhitelist(toInclude[i]);
+        }
     }
 
     function removeWhitelist() external onlyAdmins onState(State.Open) {
@@ -324,7 +345,9 @@ contract PresalePool {
         restricted = false;
         WhitelistDisabled();
 
-        includeInWhitelist(participants);
+        for (uint i = 0; i < participants.length; i++) {
+            includeInWhitelist(participants[i]);
+        }
     }
 
     function setContributionSettings(uint _minContribution, uint _maxContribution, uint _maxPoolBalance) external onlyAdmins onState(State.Open) {
@@ -347,8 +370,8 @@ contract PresalePool {
         if (recompute) {
             poolBalance = 0;
             for (uint i = 0; i < participants.length; i++) {
-                var participant = participants[i];
-                var balance = balances[participant];
+                address participant = participants[i];
+                ParticipantState storage balance = balances[participant];
                 uint oldContribution = balance.contribution;
                 (balance.contribution, balance.remaining) = getContribution(participant, 0);
                 poolBalance += balance.contribution;
@@ -372,7 +395,7 @@ contract PresalePool {
         bool[] memory exists = new bool[](participants.length);
 
         for (uint i = 0; i < participants.length; i++) {
-            var balance = balances[participants[i]];
+            ParticipantState storage balance = balances[participants[i]];
             contribution[i] = balance.contribution;
             remaining[i] = balance.remaining;
             whitelisted[i] = balance.whitelisted;
@@ -382,26 +405,23 @@ contract PresalePool {
         return (participants, contribution, remaining, whitelisted, exists);
     }
 
-    function includeInWhitelist(address[] toInclude) internal {
-        for (uint i = 0; i < toInclude.length; i++) {
-            var participant = toInclude[i];
-            var balance = balances[participant];
+    function includeInWhitelist(address participant) internal {
+        ParticipantState storage balance = balances[participant];
 
-            if (!balance.whitelisted) {
-                balance.whitelisted = true;
-                IncludedInWhitelist(participant);
+        if (!balance.whitelisted) {
+            balance.whitelisted = true;
+            IncludedInWhitelist(participant);
 
-                if (balance.remaining > 0) {
-                    (balance.contribution, balance.remaining) = getContribution(participant, 0);
-                    if (balance.contribution > 0) {
-                        poolBalance += balance.contribution;
-                        ContributionAdjusted(
-                            participant,
-                            balance.remaining,
-                            balance.contribution,
-                            poolBalance
-                        );
-                    }
+            if (balance.remaining > 0) {
+                (balance.contribution, balance.remaining) = getContribution(participant, 0);
+                if (balance.contribution > 0) {
+                    poolBalance += balance.contribution;
+                    ContributionAdjusted(
+                        participant,
+                        balance.remaining,
+                        balance.contribution,
+                        poolBalance
+                    );
                 }
             }
         }
@@ -412,20 +432,8 @@ contract PresalePool {
         state = desiredState;
     }
 
-    function transferTokensToRecipients(address[] recipients) internal {
-        uint tokenBalance = token.balanceOf(address(this));
-
-        for (uint i = 0; i < recipients.length; i++) {
-            tokenBalance = transferTokensToRecipient(recipients[i], tokenBalance);
-
-            if (tokenBalance == 0) {
-                break;
-            }
-        }
-    }
-
     function transferTokensToRecipient(address recipient, uint tokenBalance) internal noReentrancy returns(uint) {
-        var balance = balances[recipient];
+        ParticipantState storage balance = balances[recipient];
 
         if (balance.contribution > 0) {
             uint share = balance.contribution * tokenBalance / poolBalance;
@@ -453,42 +461,26 @@ contract PresalePool {
         }
     }
 
-    function isAdmin(address addr) internal constant returns (bool) {
-        for (uint i = 0; i < admins.length; i++) {
-            if (admins[i] == addr) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     function included(address participant) internal constant returns (bool) {
         return !restricted || balances[participant].whitelisted;
     }
 
     function getContribution(address participant, uint amount) internal constant returns (uint, uint) {
-        var balance = balances[participant];
+        ParticipantState storage balance = balances[participant];
         uint total = balance.remaining + balance.contribution + amount;
         uint contribution = total;
         if (!included(participant)) {
             return (0, total);
         }
         if (maxContribution > 0) {
-            contribution = min(maxContribution, contribution);
+            contribution = Util.min(maxContribution, contribution);
         }
         if (maxPoolBalance > 0) {
-            contribution = min(maxPoolBalance - poolBalance, contribution);
+            contribution = Util.min(maxPoolBalance - poolBalance, contribution);
         }
         if (contribution < minContribution) {
             return (0, total);
         }
         return (contribution, total - contribution);
-    }
-
-    function min(uint a, uint b) internal pure returns (uint _min) {
-        if (a < b) {
-            return a;
-        }
-        return b;
     }
 }
