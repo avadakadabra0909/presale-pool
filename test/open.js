@@ -421,8 +421,6 @@ describe('open state', () => {
             PresalePool.methods.withdrawAll(),
             buyer1
         );
-        expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether")
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
         await util.expectVMException(
             util.methodWithGas(PresalePool.methods.payToPresale(creator, 1), creator)

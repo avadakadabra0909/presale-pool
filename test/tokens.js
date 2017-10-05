@@ -156,11 +156,7 @@ describe('tokens', () => {
         // calling transferMyTokens() doesn't give you more tokens
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
-
-        expectedBalances[creator].contribution = web3.utils.toWei(0, "ether");
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), creator);
-        expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether");
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
         expect(await TestToken.methods.balanceOf(creator).call())
         .to.equal("40");
@@ -222,10 +218,6 @@ describe('tokens', () => {
         );
 
         await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
-
-        expectedBalances[creator].contribution = web3.utils.toWei(0, "ether");
-        expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether");
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
         expect(await TestToken.methods.balanceOf(creator).call())
         .to.equal("40");
@@ -294,10 +286,6 @@ describe('tokens', () => {
             creator
         );
 
-        expectedBalances[creator].contribution = web3.utils.toWei(0, "ether");
-        expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether");
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
-
         expect(await TestToken.methods.balanceOf(creator).call())
         .to.equal("40");
         expect(await TestToken.methods.balanceOf(buyer1).call())
@@ -343,8 +331,6 @@ describe('tokens', () => {
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), blacklistedBuyer);
 
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
-        expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether");
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
         expect(await TestToken.methods.balanceOf(PresalePool.options.address).call())
         .to.equal("30");
@@ -390,8 +376,6 @@ describe('tokens', () => {
         );
 
         await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
-        expectedBalances[buyer1].contribution = web3.utils.toWei(0, "ether");
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
         // buyer1 already claimed tokens so this doesn't do anything
         await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);

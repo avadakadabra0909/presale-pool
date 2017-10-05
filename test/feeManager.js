@@ -57,16 +57,12 @@ describe('PPFeeManager', () => {
 
         for (let i = 0; i < recipients.length; i++ ) {
             let recipient = recipients[i];
-            let beforeBalance = await web3.eth.getBalance(recipient);
-
-            await util.methodWithGas(
-                FeeManager.methods.claimFees(contractAddress),
-                recipient
-            );
-
-            let afterBalance = await web3.eth.getBalance(recipient);
-            let difference = parseInt(afterBalance) - parseInt(beforeBalance);
-            expect(difference / expectedPayout).to.be.within(.98, 1.0);
+            await util.expectBalanceChange(web3, recipient, expectedPayout, ()=> {
+                return util.methodWithGas(
+                    FeeManager.methods.claimFees(contractAddress),
+                    recipient
+                );
+            });
         }
     }
 
@@ -78,26 +74,12 @@ describe('PPFeeManager', () => {
             expectedPayout
         } = options;
 
-        let beforeBalances = [];
-        for (let i = 0; i < recipients.length; i++ ) {
-            beforeBalances.push(await web3.eth.getBalance(recipients[i]));
-        }
-
-        await util.methodWithGas(
-            FeeManager.methods.distrbuteFees(recipients),
-            contractAddress
-        );
-
-        for (let i = 0; i < recipients.length; i++ ) {
-            let beforeBalance = beforeBalances[i];
-            let afterBalance = await web3.eth.getBalance(recipients[i]);
-            let difference = parseInt(afterBalance) - parseInt(beforeBalance);
-            if (expectedPayout > 0) {
-                expect(difference / expectedPayout).to.be.within(.98, 1.0);
-            } else {
-                expect(parseFloat(afterBalance)/ parseFloat(beforeBalance)).to.be.within(.98, 1.0);
-            }
-        }
+        await util.expectBalanceChangeAddresses(web3, recipients, expectedPayout, ()=>{
+            return util.methodWithGas(
+                FeeManager.methods.distrbuteFees(recipients),
+                contractAddress
+            );
+        });
     }
 
     async function createFees(options) {
@@ -105,7 +87,7 @@ describe('PPFeeManager', () => {
             team,
             contractAddress,
             recipients,
-            feesPercentage,
+            feesPerEther,
             expectedRecipientShare,
         } = options;
 
@@ -118,7 +100,7 @@ describe('PPFeeManager', () => {
 
         await util.methodWithGas(
             FeeManager.methods.create(
-                feesPercentage,
+                feesPerEther,
                 recipients
             ),
             contractAddress
@@ -147,20 +129,14 @@ describe('PPFeeManager', () => {
 
         for (let i = 0; i < team.length; i++ ) {
             let member = team[i];
-            let beforeBalance = await web3.eth.getBalance(member);
+            let b = await FeeManager.methods.teamBalances(member).call();
 
-            await util.methodWithGas(
-                FeeManager.methods.claimTeamMemberFees(),
-                member
-            );
-
-            let afterBalance = await web3.eth.getBalance(member);
-            let difference = parseInt(afterBalance) - parseInt(beforeBalance);
-            if (expectedPayout > 0) {
-                expect(difference / expectedPayout).to.be.within(.98, 1.0);
-            } else {
-                expect(parseFloat(afterBalance)/ parseFloat(beforeBalance)).to.be.within(.98, 1.0);
-            }
+            await util.expectBalanceChange(web3, member, expectedPayout, () => {
+                return util.methodWithGas(
+                    FeeManager.methods.claimTeamMemberFees(),
+                    member
+                )
+            });
         }
     }
 
@@ -171,27 +147,12 @@ describe('PPFeeManager', () => {
             expectedPayout,
         } = options;
 
-
-        let beforeBalances = [];
-        for (let i = 0; i < team.length; i++ ) {
-            beforeBalances.push(await web3.eth.getBalance(team[i]));
-        }
-
-        await util.methodWithGas(
-            FeeManager.methods.splitAndDistributeTeamFees(),
-            team[0]
-        );
-
-        for (let i = 0; i < team.length; i++ ) {
-            let beforeBalance = beforeBalances[i];
-            let afterBalance = await web3.eth.getBalance(team[i]);
-            let difference = parseInt(afterBalance) - parseInt(beforeBalance);
-            if (expectedPayout > 0) {
-                expect(difference / expectedPayout).to.be.within(.98, 1.0);
-            } else {
-                expect(parseFloat(afterBalance)/ parseFloat(beforeBalance)).to.be.within(.98, 1.0);
-            }
-        }
+        await util.expectBalanceChangeAddresses(web3, team, expectedPayout, () =>{
+            return util.methodWithGas(
+                FeeManager.methods.splitAndDistributeTeamFees(),
+                team[0]
+            );
+        });
     }
 
     it('must have at least one team member address', async () => {
@@ -221,7 +182,7 @@ describe('PPFeeManager', () => {
         );
     });
 
-    it('feesPercentage must be less than 50%', async () => {
+    it('feesPerEther must be less than 50%', async () => {
         let team = [creator];
         let FeeManager = await util.deployContract(
             web3,
@@ -374,7 +335,7 @@ describe('PPFeeManager', () => {
         let FeeManager = await createFees({
             team: team,
             contractAddress: contractAddress,
-            feesPercentage: web3.utils.toWei(.01, "ether"),
+            feesPerEther: web3.utils.toWei(.01, "ether"),
             recipients: recipients,
             expectedRecipientShare: 0.5,
         });
@@ -418,7 +379,7 @@ describe('PPFeeManager', () => {
         let FeeManager = await createFees({
             team: team,
             contractAddress: contractAddress,
-            feesPercentage: web3.utils.toWei(.01, "ether"),
+            feesPerEther: web3.utils.toWei(.01, "ether"),
             recipients: recipients,
             expectedRecipientShare: 0.5,
         });
@@ -462,7 +423,7 @@ describe('PPFeeManager', () => {
         let FeeManager = await createFees({
             team: team,
             contractAddress: contractAddress,
-            feesPercentage: web3.utils.toWei(.1, "ether"),
+            feesPerEther: web3.utils.toWei(.1, "ether"),
             recipients: recipients,
             expectedRecipientShare: 0.9,
         });
@@ -490,7 +451,7 @@ describe('PPFeeManager', () => {
         let FeeManager = await createFees({
             team: team,
             contractAddress: contractAddress,
-            feesPercentage: web3.utils.toWei(.01, "ether"),
+            feesPerEther: web3.utils.toWei(.01, "ether"),
             recipients: recipients,
             expectedRecipientShare: 0.25,
         });
@@ -534,7 +495,7 @@ describe('PPFeeManager', () => {
         let FeeManager = await createFees({
             team: team,
             contractAddress: contractAddress,
-            feesPercentage: web3.utils.toWei(.01, "ether"),
+            feesPerEther: web3.utils.toWei(.01, "ether"),
             recipients: recipients,
             expectedRecipientShare: 0.25,
         });
@@ -578,7 +539,7 @@ describe('PPFeeManager', () => {
         let FeeManager = await createFees({
             team: team,
             contractAddress: contractAddress,
-            feesPercentage: web3.utils.toWei(.1, "ether"),
+            feesPerEther: web3.utils.toWei(.1, "ether"),
             recipients: recipients,
             expectedRecipientShare: 0.3,
         });
@@ -642,7 +603,7 @@ describe('PPFeeManager', () => {
         let FeeManager = await createFees({
             team: team,
             contractAddress: contractAddress,
-            feesPercentage: web3.utils.toWei(.01, "ether"),
+            feesPerEther: web3.utils.toWei(.01, "ether"),
             recipients: recipients,
             expectedRecipientShare: 0.25,
         });
@@ -681,7 +642,7 @@ describe('PPFeeManager', () => {
         let FeeManager = await createFees({
             team: team,
             contractAddress: contractAddress,
-            feesPercentage: web3.utils.toWei(.01, "ether"),
+            feesPerEther: web3.utils.toWei(.01, "ether"),
             recipients: recipients,
             expectedRecipientShare: 0.25,
         });
@@ -720,7 +681,7 @@ describe('PPFeeManager', () => {
         let FeeManager = await createFees({
             team: team,
             contractAddress: contractAddress,
-            feesPercentage: web3.utils.toWei(.01, "ether"),
+            feesPerEther: web3.utils.toWei(.01, "ether"),
             recipients: recipients,
             expectedRecipientShare: 0.25,
         });
@@ -759,7 +720,7 @@ describe('PPFeeManager', () => {
         let FeeManager = await createFees({
             team: team,
             contractAddress: contractAddress,
-            feesPercentage: web3.utils.toWei(.01, "ether"),
+            feesPerEther: web3.utils.toWei(.01, "ether"),
             recipients: recipients,
             expectedRecipientShare: 0.25,
         });

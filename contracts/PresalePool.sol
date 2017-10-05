@@ -1,6 +1,7 @@
 pragma solidity ^0.4.15;
 
 import "./Util.sol";
+import "./QuotaTracker.sol";
 
 interface ERC20 {
     function transfer(address _to, uint _value) returns (bool success);
@@ -13,6 +14,8 @@ interface FeeManager {
 }
 
 contract PresalePool {
+    using QuotaTracker for QuotaTracker.Data;
+
     enum State { Open, Failed, Paid, TokensReady }
     State public state;
 
@@ -33,12 +36,15 @@ contract PresalePool {
         bool exists;
     }
     mapping (address => ParticipantState) public balances;
-    uint public poolBalance;
+    uint public poolContributionBalance;
+    uint public poolRemainingBalance;
 
     address public presaleAddress;
-    uint public gasFundBalance;
 
-    ERC20 public token;
+    QuotaTracker.Data etherRefunds;
+    QuotaTracker.Data tokenDeposits;
+
+    ERC20 public tokenContract;
 
     FeeManager public feeManager;
     uint public totalFees;
@@ -47,7 +53,7 @@ contract PresalePool {
     event Deposit(
         address indexed _from,
         uint _value,
-        uint _poolBalance
+        uint _poolContributionBalance
     );
     event FeeInstalled(
         uint _percentage
@@ -67,7 +73,7 @@ contract PresalePool {
         uint _value,
         uint _remaining,
         uint _contribution,
-        uint _poolBalance
+        uint _poolContributionBalance
     );
     event ContributionSettingsChanged(
         uint _minContribution,
@@ -78,7 +84,7 @@ contract PresalePool {
         address indexed _participant,
         uint _remaining,
         uint _contribution,
-        uint _poolBalance
+        uint _poolContributionBalance
     );
     event WhitelistEnabled();
     event WhitelistDisabled();
@@ -164,25 +170,29 @@ contract PresalePool {
     }
 
     function fail() external onlyAdmins onState(State.Open) {
+        poolRemainingBalance = this.balance - poolContributionBalance;
         changeState(State.Failed);
     }
 
     function payToPresale(address _presaleAddress, uint minPoolBalance) external onlyAdmins onState(State.Open) {
-        require(poolBalance >= minPoolBalance);
+        require(poolContributionBalance >= minPoolBalance);
         changeState(State.Paid);
+        assert(this.balance >= poolContributionBalance);
+
         presaleAddress = _presaleAddress;
         if (feesPerEther > 0) {
-            totalFees = (poolBalance * feesPerEther) / 1 ether;
+            totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
         }
+        poolRemainingBalance = this.balance - poolContributionBalance;
+
         require(
-            presaleAddress.call.value(poolBalance - totalFees)()
+            presaleAddress.call.value(poolContributionBalance - totalFees)()
         );
     }
 
     function refundPresale() payable external onState(State.Paid) {
-        require(msg.value >= poolBalance);
+        require(msg.value >= (poolContributionBalance - totalFees));
         require(msg.sender == presaleAddress || Util.contains(admins, msg.sender));
-        gasFundBalance = msg.value - poolBalance;
         changeState(State.Failed);
     }
 
@@ -201,8 +211,8 @@ contract PresalePool {
     }
 
     function setToken(address tokenAddress) external onlyAdmins onState(State.Paid) {
-        token = ERC20(tokenAddress);
-        uint tokenBalance = token.balanceOf(address(this));
+        tokenContract = ERC20(tokenAddress);
+        uint tokenBalance = tokenContract.balanceOf(address(this));
         require(tokenBalance > 0);
         TokensReceived(tokenAddress, tokenBalance);
         changeState(State.TokensReady);
@@ -219,7 +229,7 @@ contract PresalePool {
         require(newRemaining == 0);
 
         ParticipantState storage balance = balances[msg.sender];
-        poolBalance = poolBalance - balance.contribution + newContribution;
+        poolContributionBalance = poolContributionBalance - balance.contribution + newContribution;
         (balance.contribution, balance.remaining) = (newContribution, newRemaining);
 
         if (!balance.exists) {
@@ -227,7 +237,7 @@ contract PresalePool {
             balance.exists = true;
             participants.push(msg.sender);
         }
-        Deposit(msg.sender, msg.value, poolBalance);
+        Deposit(msg.sender, msg.value, poolContributionBalance);
     }
 
     function withdrawAll() external {
@@ -235,18 +245,21 @@ contract PresalePool {
         uint total = balance.remaining;
         balance.remaining = 0;
 
-        if (state == State.Open || state == State.Failed) {
+        if (state == State.Open) {
             total += balance.contribution;
-            if (gasFundBalance > 0) {
-                uint gasRefund = (balance.contribution * gasFundBalance) / (poolBalance);
-                gasFundBalance -= gasRefund;
-                total += gasRefund;
-            }
-            poolBalance -= balance.contribution;
+            poolContributionBalance -= balance.contribution;
             balance.contribution = 0;
+        } else if (state == State.Failed) {
+            uint share = etherRefunds.claimShare(
+                msg.sender,
+                this.balance - poolRemainingBalance,
+                [balance.contribution, poolContributionBalance]
+            );
+            poolRemainingBalance -= total;
+            total += share;
         }
 
-        Withdrawl(msg.sender, total, 0, 0, poolBalance);
+        Withdrawl(msg.sender, total, 0, 0, poolContributionBalance);
         require(
             msg.sender.call.value(total)()
         );
@@ -261,7 +274,7 @@ contract PresalePool {
         balance.remaining = 0;
         if (debit > 0) {
             balance.contribution -= debit;
-            poolBalance -= debit;
+            poolContributionBalance -= debit;
             require(balance.contribution >= minContribution);
         }
 
@@ -270,7 +283,7 @@ contract PresalePool {
             amount,
             balance.remaining,
             balance.contribution,
-            poolBalance
+            poolContributionBalance
         );
         require(
             msg.sender.call.value(amount)()
@@ -278,12 +291,12 @@ contract PresalePool {
     }
 
     function transferMyTokens() external onState(State.TokensReady) {
-        uint tokenBalance = token.balanceOf(address(this));
+        uint tokenBalance = tokenContract.balanceOf(address(this));
         transferTokensToRecipient(msg.sender, tokenBalance);
     }
 
     function transferAllTokens() external onlyAdmins onState(State.TokensReady) {
-        uint tokenBalance = token.balanceOf(address(this));
+        uint tokenBalance = tokenContract.balanceOf(address(this));
 
         for (uint i = 0; i < participants.length; i++) {
             tokenBalance = transferTokensToRecipient(participants[i], tokenBalance);
@@ -295,7 +308,7 @@ contract PresalePool {
     }
 
     function transferTokensTo(address[] recipients) external onlyAdmins onState(State.TokensReady) {
-        uint tokenBalance = token.balanceOf(address(this));
+        uint tokenBalance = tokenContract.balanceOf(address(this));
 
         for (uint i = 0; i < recipients.length; i++) {
             tokenBalance = transferTokensToRecipient(recipients[i], tokenBalance);
@@ -322,14 +335,14 @@ contract PresalePool {
                 RemovedFromWhitelist(participant);
 
                 if (balance.contribution > 0) {
-                    poolBalance -= balance.contribution;
+                    poolContributionBalance -= balance.contribution;
                     balance.remaining += balance.contribution;
                     balance.contribution = 0;
                     ContributionAdjusted(
                         participant,
                         balance.remaining,
                         balance.contribution,
-                        poolBalance
+                        poolContributionBalance
                     );
                 }
             }
@@ -358,7 +371,7 @@ contract PresalePool {
         // we did not have a maxContribution threshold and now we do
         recompute = recompute || (maxContribution == 0 && _maxContribution > 0);
         // we want to make maxPoolBalance lower than the current pool balance
-        recompute = recompute || (poolBalance > _maxPoolBalance);
+        recompute = recompute || (poolContributionBalance > _maxPoolBalance);
 
         minContribution = _minContribution;
         maxContribution = _maxContribution;
@@ -368,20 +381,20 @@ contract PresalePool {
         ContributionSettingsChanged(minContribution, maxContribution, maxPoolBalance);
 
         if (recompute) {
-            poolBalance = 0;
+            poolContributionBalance = 0;
             for (uint i = 0; i < participants.length; i++) {
                 address participant = participants[i];
                 ParticipantState storage balance = balances[participant];
                 uint oldContribution = balance.contribution;
                 (balance.contribution, balance.remaining) = getContribution(participant, 0);
-                poolBalance += balance.contribution;
+                poolContributionBalance += balance.contribution;
 
                 if (oldContribution != balance.contribution) {
                     ContributionAdjusted(
                         participant,
                         balance.remaining,
                         balance.contribution,
-                        poolBalance
+                        poolContributionBalance
                     );
                 }
             }
@@ -415,12 +428,12 @@ contract PresalePool {
             if (balance.remaining > 0) {
                 (balance.contribution, balance.remaining) = getContribution(participant, 0);
                 if (balance.contribution > 0) {
-                    poolBalance += balance.contribution;
+                    poolContributionBalance += balance.contribution;
                     ContributionAdjusted(
                         participant,
                         balance.remaining,
                         balance.contribution,
-                        poolBalance
+                        poolContributionBalance
                     );
                 }
             }
@@ -434,20 +447,21 @@ contract PresalePool {
 
     function transferTokensToRecipient(address recipient, uint tokenBalance) internal noReentrancy returns(uint) {
         ParticipantState storage balance = balances[recipient];
+        uint share = tokenDeposits.claimShare(
+            recipient,
+            tokenBalance,
+            [balance.contribution, poolContributionBalance]
+        );
 
-        if (balance.contribution > 0) {
-            uint share = balance.contribution * tokenBalance / poolBalance;
-
-            bool succeeded = token.transfer(recipient, share);
-            if (succeeded) {
-                // it's safe to perform these updates after calling token.transfer()
-                // because we have a noReentrancy modifier on this function
-                poolBalance -= balance.contribution;
-                tokenBalance -= share;
-                balance.contribution = 0;
-            }
-            TokenTransfer(recipient, share, succeeded, tokenBalance);
+        bool succeeded = tokenContract.transfer(recipient, share);
+        if (succeeded) {
+            tokenBalance -= share;
+        } else {
+            tokenDeposits.undoClaim(recipient, share);
+            tokenBalance += share;
         }
+
+        TokenTransfer(recipient, share, succeeded, tokenBalance);
         return tokenBalance;
     }
 
@@ -476,7 +490,7 @@ contract PresalePool {
             contribution = Util.min(maxContribution, contribution);
         }
         if (maxPoolBalance > 0) {
-            contribution = Util.min(maxPoolBalance - poolBalance, contribution);
+            contribution = Util.min(maxPoolBalance - poolContributionBalance, contribution);
         }
         if (contribution < minContribution) {
             return (0, total);

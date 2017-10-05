@@ -95,8 +95,9 @@ contract PPFeeManager {
         bool isTeamMember = false;
         uint sharePerMember = teamTotalBalance / teamMembers.length;
         for (uint i = 0; i < teamMembers.length; i++) {
-            isTeamMember = isTeamMember || msg.sender == teamMembers[i];
-            teamBalances[teamMembers[i]] += sharePerMember;
+            address teamMember = teamMembers[i];
+            isTeamMember = isTeamMember || msg.sender == teamMember;
+            teamBalances[teamMember] += sharePerMember;
             teamTotalBalance -= sharePerMember;
         }
         require(isTeamMember);

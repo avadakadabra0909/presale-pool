@@ -35,7 +35,7 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                feesPercentage: web3.utils.toWei(0.49, "ether"),
+                feesPerEther: web3.utils.toWei(0.49, "ether"),
                 feeManager: PPFeeManager.options.address
             })
         );
@@ -45,7 +45,7 @@ describe('fees', () => {
                 "PresalePool",
                 creator,
                 util.createPoolArgs({
-                    feesPercentage: web3.utils.toWei(0.5, "ether"),
+                    feesPerEther: web3.utils.toWei(0.5, "ether"),
                     feeManager: PPFeeManager.options.address
                 })
             )
@@ -59,7 +59,7 @@ describe('fees', () => {
                 "PresalePool",
                 creator,
                 util.createPoolArgs({
-                    feesPercentage: web3.utils.toWei(0.49, "ether"),
+                    feesPerEther: web3.utils.toWei(0.49, "ether"),
                     feeManager: addresses[1].toLowerCase()
                 })
             )
@@ -78,7 +78,7 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                feesPercentage: web3.utils.toWei(0.2, "ether"),
+                feesPerEther: web3.utils.toWei(0.2, "ether"),
                 feeManager: FeeManager.options.address
             })
         );
@@ -127,7 +127,7 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                feesPercentage: web3.utils.toWei(0.2, "ether"),
+                feesPerEther: web3.utils.toWei(0.2, "ether"),
                 feeManager: FeeManager.options.address
             })
         );
@@ -169,7 +169,7 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                feesPercentage: web3.utils.toWei(0.2, "ether"),
+                feesPerEther: web3.utils.toWei(0.2, "ether"),
                 feeManager: FeeManager.options.address
             })
         );
@@ -216,7 +216,7 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                feesPercentage: web3.utils.toWei(0.02, "ether"),
+                feesPerEther: web3.utils.toWei(0.02, "ether"),
                 feeManager: FeeManager.options.address
             })
         );
@@ -279,7 +279,7 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                feesPercentage: web3.utils.toWei(0.02, "ether"),
+                feesPerEther: web3.utils.toWei(0.02, "ether"),
                 feeManager: FeeManager.options.address
             })
         );
@@ -341,7 +341,7 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                feesPercentage: web3.utils.toWei(0.02, "ether"),
+                feesPerEther: web3.utils.toWei(0.02, "ether"),
                 feeManager: FeeManager.options.address
             })
         );
