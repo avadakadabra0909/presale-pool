@@ -17,9 +17,9 @@ contract PPFeeManager {
         bool exists;
     }
     mapping (address => Fees) public feesForContract;
+    uint public outstandingFeesBalance;
     address[] public teamMembers;
     QuotaTracker.Data teamBalances;
-    uint public teamTotalBalance;
 
     function PPFeeManager(address[] _teamMembers) payable {
         require(_teamMembers.length > 0);
@@ -29,10 +29,11 @@ contract PPFeeManager {
                 teamMembers.push(addr);
             }
         }
-        teamTotalBalance = msg.value;
     }
 
-    function () public payable {
+    function () public payable {}
+
+    function sendFees() external payable {
         require(msg.value > 0);
         Fees storage fees = feesForContract[msg.sender];
         require(fees.exists);
@@ -40,19 +41,7 @@ contract PPFeeManager {
         fees.amount = msg.value;
 
         uint recipientShare = fees.recipientFraction.shareOf(fees.amount);
-        teamTotalBalance += fees.amount - fees.numRecipients * recipientShare;
-    }
-
-    // used only for tests
-    function getFees(address contractAddress) public constant returns(uint, uint, uint, uint, bool) {
-        Fees storage fees = feesForContract[contractAddress];
-        return (
-            fees.recipientFraction[0],
-            fees.recipientFraction[1],
-            fees.numRecipients,
-            fees.amount,
-            fees.exists
-        );
+        outstandingFeesBalance += fees.numRecipients * recipientShare;
     }
 
     function claimMyFees(address contractAddress) external {
@@ -62,6 +51,7 @@ contract PPFeeManager {
 
         uint share = fees.recipientFraction.shareOf(fees.amount);
         fees.claimed[msg.sender] = true;
+        outstandingFeesBalance -= share;
 
         require(
             msg.sender.call.value(share)()
@@ -78,6 +68,7 @@ contract PPFeeManager {
             address recipient = recipients[i];
             if (!fees.claimed[recipient]) {
                 fees.claimed[recipient] = true;
+                outstandingFeesBalance -= share;
                 require(
                     recipient.call.value(share)()
                 );
@@ -111,18 +102,17 @@ contract PPFeeManager {
 
         fees.exists = true;
 
-        // EP team will get at most 1%
-        uint teamPercentage = Util.min(
-            feesPerEther / (recipients.length + 1),
+        // PrimaBlock team will get at most 1%
+        uint teamFeesPerEther = Util.min(
+            feesPerEther / 2,
             1 ether / 100
         );
 
         fees.recipientFraction = [
-            (feesPerEther - teamPercentage) / recipients.length, // numerator
+            (feesPerEther - teamFeesPerEther) / recipients.length, // numerator
             feesPerEther // denominator
         ];
         fees.numRecipients = recipients.length;
-        require(fees.recipientFraction[0] + teamPercentage <= fees.recipientFraction[1]);
 
         for (uint i = 0; i < recipients.length; i++) {
             address recipient = recipients[i];
@@ -131,13 +121,24 @@ contract PPFeeManager {
         }
     }
 
+    // used only for tests
+    function getFees(address contractAddress) public constant returns(uint, uint, uint, uint, bool) {
+        Fees storage fees = feesForContract[contractAddress];
+        return (
+            fees.recipientFraction[0],
+            fees.recipientFraction[1],
+            fees.numRecipients,
+            fees.amount,
+            fees.exists
+        );
+    }
+
     function sendFeesForMember(address member) internal {
         uint share = teamBalances.claimShare(
             member,
-            teamTotalBalance,
+            this.balance - outstandingFeesBalance,
             [1, teamMembers.length]
         );
-        teamTotalBalance -= share;
 
         require(
             member.call.value(share)()

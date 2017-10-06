@@ -33,18 +33,18 @@ describe('PPFeeManager', () => {
             expectedTeamPayout
         } = options;
 
-        let beforeBalance = await FeeManager.methods.teamTotalBalance().call();
+        let expectedTotalRecipientsPayout = parseFloat(amount) - parseFloat(expectedTeamPayout);
+        let beforeBalance = await FeeManager.methods.outstandingFeesBalance().call();
 
-        await web3.eth.sendTransaction({
-            from: contractAddress,
-            to: FeeManager.options.address,
-            value: amount,
-            gas: 1000000
-        });
+        await util.methodWithGas(
+            FeeManager.methods.sendFees(),
+            contractAddress,
+            amount
+        );
 
-        let afterBalance = await FeeManager.methods.teamTotalBalance().call();
+        let afterBalance = await FeeManager.methods.outstandingFeesBalance().call();
         let difference = parseInt(afterBalance) - parseInt(beforeBalance);
-        expect(difference / expectedTeamPayout).to.be.within(.98, 1.0);
+        expect(difference / expectedTotalRecipientsPayout).to.be.within(.98, 1.0);
     }
 
     async function claimMyFees(options) {
@@ -439,7 +439,7 @@ describe('PPFeeManager', () => {
     it('recipients cant claim more than their share', async () => {
         let team = [creator];
         let contractAddress = addresses[1];
-        let recipients = [addresses[2], addresses[3], addresses[4]];
+        let recipients = [addresses[2], addresses[3]];
 
         let FeeManager = await createFees({
             team: team,
@@ -453,7 +453,7 @@ describe('PPFeeManager', () => {
             contractAddress: contractAddress,
             FeeManager: FeeManager,
             amount: web3.utils.toWei(10, "ether"),
-            expectedTeamPayout: web3.utils.toWei(2.5, "ether")
+            expectedTeamPayout: web3.utils.toWei(5, "ether")
         });
 
         for (let i = 0; i < recipients.length; i++) {
@@ -475,10 +475,10 @@ describe('PPFeeManager', () => {
         }
     });
 
-    it('recipient share of fee is 25% when there are 3 recipients - claim fees', async () => {
+    it('recipients cant claim more than their share via distribute fees', async () => {
         let team = [creator];
         let contractAddress = addresses[1];
-        let recipients = [addresses[2], addresses[3], addresses[4]];
+        let recipients = [addresses[2], addresses[3]];
 
         let FeeManager = await createFees({
             team: team,
@@ -492,51 +492,7 @@ describe('PPFeeManager', () => {
             contractAddress: contractAddress,
             FeeManager: FeeManager,
             amount: web3.utils.toWei(10, "ether"),
-            expectedTeamPayout: web3.utils.toWei(2.5, "ether")
-        });
-
-        await claimMyFees({
-            recipients: recipients,
-            FeeManager: FeeManager,
-            contractAddress: contractAddress,
-            expectedPayout: web3.utils.toWei(2.5, "ether")
-        });
-
-        await util.expectVMException(
-            claimMyFees({
-                recipients: [recipients[1]],
-                FeeManager: FeeManager,
-                contractAddress: contractAddress,
-                expectedPayout: web3.utils.toWei(0, "ether")
-            })
-        );
-
-        await distrbuteFees({
-            recipients: recipients,
-            FeeManager: FeeManager,
-            contractAddress: contractAddress,
-            expectedPayout: web3.utils.toWei(0, "ether")
-        });
-    });
-
-    it('recipient share of fee is 25% when there are 3 recipients - distribute fees', async () => {
-        let team = [creator];
-        let contractAddress = addresses[1];
-        let recipients = [addresses[2], addresses[3], addresses[4]];
-
-        let FeeManager = await createFees({
-            team: team,
-            contractAddress: contractAddress,
-            feesPerEther: web3.utils.toWei(.01, "ether"),
-            recipients: recipients,
-            expectedRecipientShare: 0.25,
-        });
-
-        await payFees({
-            contractAddress: contractAddress,
-            FeeManager: FeeManager,
-            amount: web3.utils.toWei(10, "ether"),
-            expectedTeamPayout: web3.utils.toWei(2.5, "ether")
+            expectedTeamPayout: web3.utils.toWei(5, "ether")
         });
 
         await distrbuteFees({
@@ -546,34 +502,25 @@ describe('PPFeeManager', () => {
             expectedPayout: web3.utils.toWei(2.5, "ether")
         });
 
-        await util.expectVMException(
-            claimMyFees({
-                recipients: [recipients[1]],
-                FeeManager: FeeManager,
-                contractAddress: contractAddress,
-                expectedPayout: web3.utils.toWei(0, "ether")
-            })
-        );
-
         await distrbuteFees({
             recipients: recipients,
             FeeManager: FeeManager,
             contractAddress: contractAddress,
-            expectedPayout: web3.utils.toWei(0, "ether")
+            expectedPayout: 0
         });
     });
 
     it('caps team fee to 1% when there is more than 1 recipient', async () => {
         let team = [creator];
         let contractAddress = addresses[1];
-        let recipients = [addresses[2], addresses[3], addresses[4]];
+        let recipients = [addresses[2], addresses[3]];
 
         let FeeManager = await createFees({
             team: team,
             contractAddress: contractAddress,
             feesPerEther: web3.utils.toWei(.1, "ether"),
             recipients: recipients,
-            expectedRecipientShare: 0.3,
+            expectedRecipientShare: 0.45,
         });
 
         await payFees({
@@ -587,7 +534,7 @@ describe('PPFeeManager', () => {
             recipients: recipients,
             FeeManager: FeeManager,
             contractAddress: contractAddress,
-            expectedPayout: web3.utils.toWei(3, "ether")
+            expectedPayout: web3.utils.toWei(4.5, "ether")
         });
     });
 
@@ -630,7 +577,7 @@ describe('PPFeeManager', () => {
     it('claimMyTeamFees with 1 team member', async () => {
         let team = [addresses[1]];
         let contractAddress = addresses[2];
-        let recipients = [addresses[3], addresses[4], addresses[5]];
+        let recipients = [addresses[3], addresses[4]];
 
         let FeeManager = await createFees({
             team: team,
@@ -644,13 +591,13 @@ describe('PPFeeManager', () => {
             contractAddress: contractAddress,
             FeeManager: FeeManager,
             amount: web3.utils.toWei(10, "ether"),
-            expectedTeamPayout: web3.utils.toWei(2.5, "ether")
+            expectedTeamPayout: web3.utils.toWei(5, "ether")
         });
 
         await claimMyTeamFees({
             FeeManager: FeeManager,
             team: team,
-            expectedPayout: web3.utils.toWei(2.5, "ether")
+            expectedPayout: web3.utils.toWei(5, "ether")
         });
 
         await distributeTeamFees({
@@ -669,7 +616,7 @@ describe('PPFeeManager', () => {
     it('distributeTeamFees with 1 team member', async () => {
         let team = [addresses[1]];
         let contractAddress = addresses[2];
-        let recipients = [addresses[3], addresses[4], addresses[5]];
+        let recipients = [addresses[3], addresses[4]];
 
         let FeeManager = await createFees({
             team: team,
@@ -683,13 +630,13 @@ describe('PPFeeManager', () => {
             contractAddress: contractAddress,
             FeeManager: FeeManager,
             amount: web3.utils.toWei(10, "ether"),
-            expectedTeamPayout: web3.utils.toWei(2.5, "ether")
+            expectedTeamPayout: web3.utils.toWei(5, "ether")
         });
 
         await distributeTeamFees({
             FeeManager: FeeManager,
             team: team,
-            expectedPayout: web3.utils.toWei(2.5, "ether")
+            expectedPayout: web3.utils.toWei(5, "ether")
         });
 
         await claimMyTeamFees({
@@ -708,7 +655,7 @@ describe('PPFeeManager', () => {
     it('team members cant claim more than their share', async () => {
         let team = [addresses[1], addresses[2], addresses[3]];
         let contractAddress = addresses[4];
-        let recipients = [addresses[5], addresses[6], addresses[7]];
+        let recipients = [addresses[5], addresses[6]];
 
         let FeeManager = await createFees({
             team: team,
@@ -718,18 +665,30 @@ describe('PPFeeManager', () => {
             expectedRecipientShare: 0.25,
         });
 
+        await web3.eth.sendTransaction({
+            from: addresses[7],
+            to: FeeManager.options.address,
+            value: web3.utils.toWei(3, "ether")
+        });
+
         await payFees({
             contractAddress: contractAddress,
             FeeManager: FeeManager,
             amount: web3.utils.toWei(10, "ether"),
-            expectedTeamPayout: web3.utils.toWei(2.5, "ether")
+            expectedTeamPayout: web3.utils.toWei(5, "ether")
+        });
+
+        await web3.eth.sendTransaction({
+            from: addresses[7],
+            to: FeeManager.options.address,
+            value: web3.utils.toWei(1, "ether")
         });
 
         for (let i = 0; i < team.length; i++) {
             await claimMyTeamFees({
                 FeeManager: FeeManager,
                 team: [team[i]],
-                expectedPayout: web3.utils.toWei(2.5/3, "ether")
+                expectedPayout: web3.utils.toWei(3, "ether")
             });
             await claimMyTeamFees({
                 FeeManager: FeeManager,
@@ -742,7 +701,7 @@ describe('PPFeeManager', () => {
     it('claimMyTeamFees with more than 1 team member', async () => {
         let team = [addresses[1], addresses[2], addresses[3]];
         let contractAddress = addresses[4];
-        let recipients = [addresses[5], addresses[6], addresses[7]];
+        let recipients = [addresses[5], addresses[6]];
 
         let FeeManager = await createFees({
             team: team,
@@ -752,17 +711,29 @@ describe('PPFeeManager', () => {
             expectedRecipientShare: 0.25,
         });
 
+        await web3.eth.sendTransaction({
+            from: addresses[7],
+            to: FeeManager.options.address,
+            value: web3.utils.toWei(3, "ether")
+        });
+
         await payFees({
             contractAddress: contractAddress,
             FeeManager: FeeManager,
             amount: web3.utils.toWei(10, "ether"),
-            expectedTeamPayout: web3.utils.toWei(2.5, "ether")
+            expectedTeamPayout: web3.utils.toWei(5, "ether")
+        });
+
+        await web3.eth.sendTransaction({
+            from: addresses[7],
+            to: FeeManager.options.address,
+            value: web3.utils.toWei(1, "ether")
         });
 
         await claimMyTeamFees({
             FeeManager: FeeManager,
             team: team,
-            expectedPayout: web3.utils.toWei(2.5/3, "ether")
+            expectedPayout: web3.utils.toWei(3, "ether")
         });
 
         await distributeTeamFees({
@@ -781,7 +752,7 @@ describe('PPFeeManager', () => {
     it('distributeTeamFees with more than 1 team member', async () => {
         let team = [addresses[1], addresses[2]];
         let contractAddress = addresses[4];
-        let recipients = [addresses[5], addresses[6], addresses[7]];
+        let recipients = [addresses[5], addresses[6]];
 
         let FeeManager = await createFees({
             team: team,
@@ -791,17 +762,107 @@ describe('PPFeeManager', () => {
             expectedRecipientShare: 0.25,
         });
 
+        await web3.eth.sendTransaction({
+            from: addresses[7],
+            to: FeeManager.options.address,
+            value: web3.utils.toWei(3, "ether")
+        });
+
         await payFees({
             contractAddress: contractAddress,
             FeeManager: FeeManager,
             amount: web3.utils.toWei(10, "ether"),
-            expectedTeamPayout: web3.utils.toWei(2.5, "ether")
+            expectedTeamPayout: web3.utils.toWei(5, "ether")
+        });
+
+        await web3.eth.sendTransaction({
+            from: addresses[7],
+            to: FeeManager.options.address,
+            value: web3.utils.toWei(1, "ether")
         });
 
         await distributeTeamFees({
             FeeManager: FeeManager,
             team: team,
-            expectedPayout: web3.utils.toWei(2.5/2, "ether")
+            expectedPayout: web3.utils.toWei(4.5, "ether")
+        });
+    });
+
+
+    it('claimFees and claimTeem fees with more than 1 team member', async () => {
+        let team = [addresses[1], addresses[2], addresses[3]];
+        let contractAddress = addresses[4];
+        let recipients = [addresses[5], addresses[6]];
+
+        let FeeManager = await createFees({
+            team: team,
+            contractAddress: contractAddress,
+            feesPerEther: web3.utils.toWei(.01, "ether"),
+            recipients: recipients,
+            expectedRecipientShare: 0.25,
+        });
+
+        await web3.eth.sendTransaction({
+            from: addresses[7],
+            to: FeeManager.options.address,
+            value: web3.utils.toWei(3, "ether")
+        });
+
+        await claimMyTeamFees({
+            FeeManager: FeeManager,
+            team: [team[0]],
+            expectedPayout: web3.utils.toWei(1, "ether")
+        });
+
+        await payFees({
+            contractAddress: contractAddress,
+            FeeManager: FeeManager,
+            amount: web3.utils.toWei(10, "ether"),
+            expectedTeamPayout: web3.utils.toWei(5, "ether")
+        });
+
+        await claimMyTeamFees({
+            FeeManager: FeeManager,
+            team: [team[1]],
+            expectedPayout: web3.utils.toWei(8/3.0, "ether")
+        });
+
+        await claimMyFees({
+            contractAddress: contractAddress,
+            recipients: [recipients[0]],
+            FeeManager: FeeManager,
+            expectedPayout: web3.utils.toWei(2.5, "ether"),
+        });
+
+        await web3.eth.sendTransaction({
+            from: addresses[7],
+            to: FeeManager.options.address,
+            value: web3.utils.toWei(1, "ether")
+        });
+
+        await claimMyTeamFees({
+            FeeManager: FeeManager,
+            team: [team[0]],
+            expectedPayout: web3.utils.toWei(2, "ether")
+        });
+
+        await claimMyFees({
+            contractAddress: contractAddress,
+            recipients: [recipients[1]],
+            FeeManager: FeeManager,
+            expectedPayout: web3.utils.toWei(2.5, "ether"),
+        });
+
+        await claimMyTeamFees({
+            FeeManager: FeeManager,
+            team: [team[1]],
+            expectedPayout: web3.utils.toWei(1/3.0, "ether")
+        });
+
+        await claimMyTeamFees({
+            FeeManager: FeeManager,
+            team: [team[2]],
+            expectedPayout: web3.utils.toWei(3, "ether")
         });
     });
 });

@@ -10,6 +10,7 @@ interface ERC20 {
 
 interface FeeManager {
     function create(uint _feesPerEther, address[] _recipients);
+    function sendFees() payable;
     function distrbuteFees(address[] _recipients);
 }
 
@@ -215,9 +216,7 @@ contract PresalePool {
         require(tokenDeposits.totalClaimed > 0);
         uint amount = totalFees;
         totalFees = 0;
-        require(
-            (address(feeManager)).call.value(amount)()
-        );
+        feeManager.sendFees.value(amount)();
     }
 
     function transferAndDistributeFees() external {
