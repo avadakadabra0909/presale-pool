@@ -7,11 +7,11 @@ It supports the following configuration options:
 * cap on total contributions from the pool
 * whitelist of addresses which are allowed to contribute to the pool
 
-Once deployed, the `PresalePool` contract can be in one of four states: `Open`, `Failed`, or `Paid`
+Once deployed, the `PresalePool` contract can be in one of four states: `Open`, `Failed`, `Refund`, or `Paid`
 
 In the `Open` state contributors are able to deposit funds to the pool or withdraw funds from their contributions.
 
-In the `Failed` state contributors can only withdraw their funds from the pool.
+In the `Failed` or `Refund` state contributors can only withdraw their funds from the pool.
 
 In the `Paid` state contributors can withdraw funds which were not included in the pool's overall contribution to the ICO.
 After the contract creator sets token contract on `PresalePool`, contributors will able to obtain their tokens.
