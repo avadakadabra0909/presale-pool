@@ -177,7 +177,7 @@ contract PresalePool {
         require(msg.sender == refundSenderAddress);
     }
 
-    function version() public returns (uint, uint, uint) {
+    function version() public pure returns (uint, uint, uint) {
         return (1, 0, 0);
     }
 

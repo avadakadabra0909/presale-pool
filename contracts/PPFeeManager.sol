@@ -44,7 +44,7 @@ contract PPFeeManager {
     }
 
     // used only for tests
-    function getFees(address contractAddress) public returns(uint, uint, uint, uint, bool) {
+    function getFees(address contractAddress) public constant returns(uint, uint, uint, uint, bool) {
         Fees storage fees = feesForContract[contractAddress];
         return (
             fees.recipientFraction[0],
