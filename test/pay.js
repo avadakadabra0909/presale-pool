@@ -97,6 +97,11 @@ describe('pay to presale address', () => {
         await util.expectVMException(
             util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator)
         );
+    });
+
+    it("cant transition to failed state from paid state", async () => {
+        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator)
+
         await util.expectVMException(
             util.methodWithGas(PresalePool.methods.fail(), creator)
         );
@@ -137,7 +142,7 @@ describe('pay to presale address', () => {
             contribution: web3.utils.toWei(0, "ether")
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(6, "ether"));
-        await payToPresale(web3.utils.toWei(5, "ether"));
+        await payToPresale(web3.utils.toWei(5, "ether"), 0);
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1, "ether"));
 
         let buyerBalance = await web3.eth.getBalance(buyer2);
@@ -145,8 +150,8 @@ describe('pay to presale address', () => {
         expectedBalances[buyer2].remaining = web3.utils.toWei(0, "ether");
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
-        let buyerBalanceAfterRefund = await web3.eth.getBalance(buyer2);
-        let difference = parseInt(buyerBalanceAfterRefund) - parseInt(buyerBalance);
+        let balanceAfterWithdrawl = await web3.eth.getBalance(buyer2);
+        let difference = parseInt(balanceAfterWithdrawl) - parseInt(buyerBalance);
         expect(difference / web3.utils.toWei(1, "ether")).to.be.within(.98, 1.0);
     });
 
@@ -174,7 +179,7 @@ describe('pay to presale address', () => {
             contribution: web3.utils.toWei(1, "ether")
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(6, "ether"));
-        await payToPresale(web3.utils.toWei(3, "ether"));
+        await payToPresale(web3.utils.toWei(3, "ether"), 0);
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(3, "ether"));
 
         let buyerBalance = await web3.eth.getBalance(buyer1);
@@ -182,8 +187,8 @@ describe('pay to presale address', () => {
         expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether");
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
-        let buyerBalanceAfterRefund = await web3.eth.getBalance(buyer1);
-        let difference = parseInt(buyerBalanceAfterRefund) - parseInt(buyerBalance);
+        let balanceAfterWithdrawl = await web3.eth.getBalance(buyer1);
+        let difference = parseInt(balanceAfterWithdrawl) - parseInt(buyerBalance);
         expect(difference / web3.utils.toWei(3, "ether")).to.be.within(.98, 1.0);
     });
 
@@ -211,11 +216,11 @@ describe('pay to presale address', () => {
             contribution: web3.utils.toWei(0, "ether")
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(6, "ether"));
-        await payToPresale(web3.utils.toWei(2, "ether"));
+        await payToPresale(web3.utils.toWei(2, "ether"), 0);
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(4, "ether"));
 
         let buyerBalance = await web3.eth.getBalance(buyer1);
-        //cant do partial refunds in paid state
+        //cant do partial withdrawls in paid state
         await util.expectVMException(
             util.methodWithGas(
                 PresalePool.methods.withdraw(web3.utils.toWei(5, "ether")),
@@ -229,8 +234,8 @@ describe('pay to presale address', () => {
         expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether");
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1, "ether"));
 
-        let buyerBalanceAfterRefund = await web3.eth.getBalance(buyer1);
-        let difference = parseInt(buyerBalanceAfterRefund) - parseInt(buyerBalance);
+        let balanceAfterWithdrawl = await web3.eth.getBalance(buyer1);
+        let difference = parseInt(balanceAfterWithdrawl) - parseInt(buyerBalance);
         expect(difference / web3.utils.toWei(3, "ether")).to.be.within(.97, 1.0);
     });
 
@@ -272,7 +277,7 @@ describe('pay to presale address', () => {
             contribution: web3.utils.toWei(0, "ether")
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(8, "ether"));
-        await payToPresale(web3.utils.toWei(3, "ether"));
+        await payToPresale(web3.utils.toWei(3, "ether"), 0);
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
         let buyerBalance = await web3.eth.getBalance(buyer1);
@@ -280,8 +285,8 @@ describe('pay to presale address', () => {
         expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether");
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1, "ether"));
 
-        let buyerBalanceAfterRefund = await web3.eth.getBalance(buyer1);
-        let difference = parseInt(buyerBalanceAfterRefund) - parseInt(buyerBalance);
+        let balanceAfterWithdrawl = await web3.eth.getBalance(buyer1);
+        let difference = parseInt(balanceAfterWithdrawl) - parseInt(buyerBalance);
         expect(difference / web3.utils.toWei(4, "ether")).to.be.within(.98, 1.0);
     });
 
@@ -309,7 +314,7 @@ describe('pay to presale address', () => {
             contribution: web3.utils.toWei(0, "ether")
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(6, "ether"));
-        await payToPresale(web3.utils.toWei(5, "ether"));
+        await payToPresale(web3.utils.toWei(5, "ether"), 0);
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1, "ether"));
 
         let buyerBalance = await web3.eth.getBalance(buyer2);
@@ -317,8 +322,8 @@ describe('pay to presale address', () => {
         expectedBalances[buyer2].remaining = web3.utils.toWei(0, "ether");
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
 
-        let buyerBalanceAfterRefund = await web3.eth.getBalance(buyer2);
-        let difference = parseInt(buyerBalanceAfterRefund) - parseInt(buyerBalance);
+        let balanceAfterWithdrawl = await web3.eth.getBalance(buyer2);
+        let difference = parseInt(balanceAfterWithdrawl) - parseInt(buyerBalance);
         expect(difference / web3.utils.toWei(1, "ether")).to.be.within(.98, 1.0);
     });
 

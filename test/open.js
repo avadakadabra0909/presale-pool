@@ -118,7 +118,7 @@ describe('open state', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(13, "ether"));
     });
 
-    it('performs refunds', async () => {
+    it('performs full withdrawls', async () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer1,
@@ -417,10 +417,12 @@ describe('open state', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
 
-        await util.methodWithGas(
-            PresalePool.methods.withdrawAll(),
-            buyer1
-        );
+        await util.expectBalanceChange(web3, buyer1, web3.utils.toWei(5, "ether"), () =>{
+            return util.methodWithGas(
+                PresalePool.methods.withdrawAll(),
+                buyer1
+            );
+        });
 
         await util.expectVMException(
             util.methodWithGas(PresalePool.methods.payToPresale(creator, 1), creator)

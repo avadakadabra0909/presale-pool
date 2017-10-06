@@ -16,7 +16,7 @@ interface FeeManager {
 contract PresalePool {
     using QuotaTracker for QuotaTracker.Data;
 
-    enum State { Open, Failed, Paid, TokensReady }
+    enum State { Open, Failed, Paid, Refund }
     State public state;
 
     address[] public admins;
@@ -41,7 +41,9 @@ contract PresalePool {
 
     address public presaleAddress;
 
+    address public refundSenderAddress;
     QuotaTracker.Data etherRefunds;
+    bool public allowTokenClaiming;
     QuotaTracker.Data tokenDeposits;
 
     ERC20 public tokenContract;
@@ -58,8 +60,9 @@ contract PresalePool {
     event FeeInstalled(
         uint _percentage
     );
-    event TokensReceived(
+    event TokenAddressSet(
         address _tokenAddress,
+        bool _allowTokenClaiming,
         uint _poolTokenBalance
     );
     event TokenTransfer(
@@ -109,6 +112,11 @@ contract PresalePool {
 
     modifier onState(State s) {
         require(state == s);
+        _;
+    }
+
+    modifier canClaimTokens() {
+        require(state == State.Paid && allowTokenClaiming);
         _;
     }
 
@@ -165,6 +173,10 @@ contract PresalePool {
         }
     }
 
+    function () public payable onState(State.Refund) noReentrancy {
+        require(msg.sender == refundSenderAddress);
+    }
+
     function version() public returns (uint, uint, uint) {
         return (1, 0, 0);
     }
@@ -179,25 +191,28 @@ contract PresalePool {
         changeState(State.Paid);
         assert(this.balance >= poolContributionBalance);
 
-        presaleAddress = _presaleAddress;
         if (feesPerEther > 0) {
             totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
         }
         poolRemainingBalance = this.balance - poolContributionBalance;
 
         require(
-            presaleAddress.call.value(poolContributionBalance - totalFees)()
+            _presaleAddress.call.value(poolContributionBalance - totalFees)()
         );
     }
 
-    function refundPresale() payable external onState(State.Paid) {
-        require(msg.value >= (poolContributionBalance - totalFees));
-        require(msg.sender == presaleAddress || Util.contains(admins, msg.sender));
-        changeState(State.Failed);
+    function expectRefund(address sender) payable external onlyAdmins {
+        require(state == State.Paid || state == State.Refund);
+        require(tokenDeposits.totalClaimed == 0);
+        refundSenderAddress = sender;
+        if (state == State.Paid) {
+            changeState(State.Refund);
+        }
     }
 
-    function transferFees() public onState(State.TokensReady) {
+    function transferFees() public onState(State.Paid) {
         require(totalFees > 0);
+        require(tokenDeposits.totalClaimed > 0);
         uint amount = totalFees;
         totalFees = 0;
         require(
@@ -210,12 +225,14 @@ contract PresalePool {
         feeManager.distrbuteFees(admins);
     }
 
-    function setToken(address tokenAddress) external onlyAdmins onState(State.Paid) {
+    function setToken(address tokenAddress, bool _allowTokenClaiming) external onlyAdmins {
+        require(state == State.Paid || state == State.Open);
+        require(tokenDeposits.totalClaimed == 0);
+        allowTokenClaiming = _allowTokenClaiming;
         tokenContract = ERC20(tokenAddress);
-        uint tokenBalance = tokenContract.balanceOf(address(this));
-        require(tokenBalance > 0);
-        TokensReceived(tokenAddress, tokenBalance);
-        changeState(State.TokensReady);
+        TokenAddressSet(
+            tokenAddress, allowTokenClaiming, tokenContract.balanceOf(this)
+        );
     }
 
     function deposit() payable public onState(State.Open) {
@@ -245,11 +262,11 @@ contract PresalePool {
         uint total = balance.remaining;
         balance.remaining = 0;
 
-        if (state == State.Open) {
+        if (state == State.Open || state == State.Failed) {
             total += balance.contribution;
             poolContributionBalance -= balance.contribution;
             balance.contribution = 0;
-        } else if (state == State.Failed) {
+        } else if (state == State.Refund) {
             uint share = etherRefunds.claimShare(
                 msg.sender,
                 this.balance - poolRemainingBalance,
@@ -257,6 +274,8 @@ contract PresalePool {
             );
             poolRemainingBalance -= total;
             total += share;
+        } else {
+            require(state == State.Paid);
         }
 
         Withdrawl(msg.sender, total, 0, 0, poolContributionBalance);
@@ -290,12 +309,12 @@ contract PresalePool {
         );
     }
 
-    function transferMyTokens() external onState(State.TokensReady) {
+    function transferMyTokens() external canClaimTokens {
         uint tokenBalance = tokenContract.balanceOf(address(this));
         transferTokensToRecipient(msg.sender, tokenBalance);
     }
 
-    function transferAllTokens() external onlyAdmins onState(State.TokensReady) {
+    function transferAllTokens() external canClaimTokens {
         uint tokenBalance = tokenContract.balanceOf(address(this));
 
         for (uint i = 0; i < participants.length; i++) {
@@ -307,7 +326,7 @@ contract PresalePool {
         }
     }
 
-    function transferTokensTo(address[] recipients) external onlyAdmins onState(State.TokensReady) {
+    function transferTokensTo(address[] recipients) external canClaimTokens {
         uint tokenBalance = tokenContract.balanceOf(address(this));
 
         for (uint i = 0; i < recipients.length; i++) {

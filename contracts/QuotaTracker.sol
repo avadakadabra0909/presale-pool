@@ -10,7 +10,7 @@ library QuotaTracker {
         uint totalClaimed;
     }
 
-    function claimShare(Data storage self, address addr, uint currentBalance, uint[2] fraction) returns (uint) {
+    function claimShare(Data storage self, address addr, uint currentBalance, uint[2] fraction) internal returns (uint) {
         uint share = fraction.shareOf(currentBalance + self.totalClaimed);
         uint claimed = self.claimedBy[addr];
         assert(claimed <= share);
@@ -22,7 +22,7 @@ library QuotaTracker {
         return diff;
     }
 
-    function undoClaim(Data storage self, address addr, uint amount) returns (uint) {
+    function undoClaim(Data storage self, address addr, uint amount) internal returns (uint) {
         assert(amount <= self.claimedBy[addr]);
 
         self.claimedBy[addr] -= amount;

@@ -2,9 +2,11 @@ pragma solidity ^0.4.15;
 
 import "./Util.sol";
 import "./Fraction.sol";
+import "./QuotaTracker.sol";
 
 contract PPFeeManager {
     using Fraction for uint[2];
+    using QuotaTracker for QuotaTracker.Data;
 
     struct Fees {
         mapping (address => bool) claimed;
@@ -16,7 +18,7 @@ contract PPFeeManager {
     }
     mapping (address => Fees) public feesForContract;
     address[] public teamMembers;
-    mapping (address => uint) public teamBalances;
+    QuotaTracker.Data teamBalances;
     uint public teamTotalBalance;
 
     function PPFeeManager(address[] _teamMembers) payable {
@@ -30,7 +32,7 @@ contract PPFeeManager {
         teamTotalBalance = msg.value;
     }
 
-    function () payable {
+    function () public payable {
         require(msg.value > 0);
         Fees storage fees = feesForContract[msg.sender];
         require(fees.exists);
@@ -53,7 +55,7 @@ contract PPFeeManager {
         );
     }
 
-    function claimFees(address contractAddress) external {
+    function claimMyFees(address contractAddress) external {
         Fees storage fees = feesForContract[contractAddress];
         require(fees.amount > 0);
         require(fees.isRecipient[msg.sender] && !fees.claimed[msg.sender]);
@@ -83,36 +85,19 @@ contract PPFeeManager {
         }
     }
 
-    function claimTeamMemberFees() external {
-        uint amount = teamBalances[msg.sender];
-        teamBalances[msg.sender] = 0;
-        require(
-            msg.sender.call.value(amount)()
-        );
+    function claimMyTeamFees() external {
+        require(Util.contains(teamMembers, msg.sender));
+        sendFeesForMember(msg.sender);
     }
 
-    function splitTeamFees() public {
-        bool isTeamMember = false;
-        uint sharePerMember = teamTotalBalance / teamMembers.length;
-        for (uint i = 0; i < teamMembers.length; i++) {
-            address teamMember = teamMembers[i];
-            isTeamMember = isTeamMember || msg.sender == teamMember;
-            teamBalances[teamMember] += sharePerMember;
-            teamTotalBalance -= sharePerMember;
-        }
-        require(isTeamMember);
-    }
-
-    function splitAndDistributeTeamFees() external {
-        splitTeamFees();
+    function distributeTeamFees() external {
+        bool calledByTeamMember = false;
         for (uint i = 0; i < teamMembers.length; i++) {
             address member = teamMembers[i];
-            uint amount = teamBalances[member];
-            teamBalances[member] = 0;
-            require(
-                member.call.value(amount)()
-            );
+            calledByTeamMember = calledByTeamMember || msg.sender == member;
+            sendFeesForMember(member);
         }
+        require(calledByTeamMember);
     }
 
     function create(uint feesPerEther, address[] recipients) external {
@@ -144,5 +129,18 @@ contract PPFeeManager {
             require(!fees.isRecipient[recipient]);
             fees.isRecipient[recipient] = true;
         }
+    }
+
+    function sendFeesForMember(address member) internal {
+        uint share = teamBalances.claimShare(
+            member,
+            teamTotalBalance,
+            [1, teamMembers.length]
+        );
+        teamTotalBalance -= share;
+
+        require(
+            member.call.value(share)()
+        );
     }
 }

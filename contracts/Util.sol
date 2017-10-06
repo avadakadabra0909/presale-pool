@@ -2,7 +2,7 @@ pragma solidity ^0.4.15;
 
 library Util {
 
-    function min(uint a, uint b) returns (uint _min) {
+    function min(uint a, uint b) pure internal returns (uint _min) {
         if (a < b) {
             return a;
         }
