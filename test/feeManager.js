@@ -865,5 +865,117 @@ describe('PPFeeManager', () => {
             expectedPayout: web3.utils.toWei(3, "ether")
         });
     });
+
+    describe("token donations", () => {
+        let TestToken;
+        let FeeManager;
+        let blacklisted;
+        let memberA;
+        let memberB;
+
+        beforeEach(async () => {
+            let tokenHolder = addresses[1];
+            blacklisted = addresses[2];
+            memberA = addresses[3];
+            memberB = addresses[4];
+
+            TestToken = await util.deployContract(
+                web3,
+                "TestToken",
+                creator,
+                [blacklisted]
+            );
+            FeeManager = await createFees({
+                team: [blacklisted, memberB, memberA],
+                contractAddress: addresses[5],
+                feesPerEther: web3.utils.toWei(.01, "ether"),
+                recipients: [creator],
+                expectedRecipientShare: 0.5,
+            });
+
+            await web3.eth.sendTransaction({
+                from: tokenHolder,
+                to: TestToken.options.address,
+                value: web3.utils.toWei(.1, "ether")
+            });
+
+            await util.methodWithGas(
+                TestToken.methods.transfer(
+                    FeeManager.options.address,
+                    60
+                ),
+                tokenHolder
+            );
+        });
+
+        async function tokenBalanceEquals(address, amount) {
+            expect(
+                parseInt(
+                    await TestToken.methods.balanceOf(address).call()
+                )
+            ).to.equal(amount);
+        }
+
+        it("claimMyTeamTokens()", async () => {
+            await tokenBalanceEquals(FeeManager.options.address, 60);
+
+            await util.expectVMException(
+                util.methodWithGas(
+                    FeeManager.methods.claimMyTeamTokens(TestToken.options.address),
+                    creator
+                )
+            );
+
+            await util.methodWithGas(
+                FeeManager.methods.claimMyTeamTokens(TestToken.options.address),
+                memberA
+            );
+            await util.methodWithGas(
+                FeeManager.methods.claimMyTeamTokens(TestToken.options.address),
+                blacklisted
+            );
+            await util.methodWithGas(
+                FeeManager.methods.claimMyTeamTokens(TestToken.options.address),
+                memberB
+            );
+            await util.methodWithGas(
+                FeeManager.methods.claimMyTeamTokens(TestToken.options.address),
+                memberA
+            );
+
+            await tokenBalanceEquals(FeeManager.options.address, 20);
+
+            await tokenBalanceEquals(memberA, 20);
+            await tokenBalanceEquals(memberB, 20);
+            await tokenBalanceEquals(blacklisted, 0);
+        });
+
+        it("distributeTeamTokens()", async () => {
+            await tokenBalanceEquals(FeeManager.options.address, 60);
+
+            await util.expectVMException(
+                util.methodWithGas(
+                    FeeManager.methods.distributeTeamTokens(TestToken.options.address),
+                    creator
+                )
+            );
+
+            await util.methodWithGas(
+                FeeManager.methods.distributeTeamTokens(TestToken.options.address),
+                memberA
+            );
+            await util.methodWithGas(
+                FeeManager.methods.distributeTeamTokens(TestToken.options.address),
+                memberB
+            );
+
+            await tokenBalanceEquals(FeeManager.options.address, 20);
+
+            await tokenBalanceEquals(memberA, 20);
+            await tokenBalanceEquals(memberB, 20);
+            await tokenBalanceEquals(blacklisted, 0);
+        });
+    });
+
 });
 

@@ -419,14 +419,10 @@ describe('setToken', () => {
                 creator
             );
 
-            // doesn't get anything because buyer2 is not in the pool
-            await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer2);
-            // doesn't get anything because the transfer failed
-            await util.methodWithGas(PresalePool.methods.transferMyTokens(), blacklistedBuyer);
-            await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
-
             await util.methodWithGas(
-                PresalePool.methods.transferTokensTo([blacklistedBuyer]),
+                PresalePool.methods.transferTokensTo([
+                    blacklistedBuyer, blacklistedBuyer, buyer1, buyer2, buyer1
+                ]),
                 creator
             );
             await util.methodWithGas(PresalePool.methods.transferMyTokens(), creator);

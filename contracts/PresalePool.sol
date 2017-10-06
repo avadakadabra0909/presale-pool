@@ -121,14 +121,6 @@ contract PresalePool {
         _;
     }
 
-    bool locked;
-    modifier noReentrancy() {
-        require(!locked);
-        locked = true;
-        _;
-        locked = false;
-    }
-
     function PresalePool(
         address _feeManager,
         uint _feesPerEther,
@@ -174,7 +166,7 @@ contract PresalePool {
         }
     }
 
-    function () public payable onState(State.Refund) noReentrancy {
+    function () public payable onState(State.Refund) {
         require(msg.sender == refundSenderAddress);
     }
 
@@ -230,7 +222,9 @@ contract PresalePool {
         allowTokenClaiming = _allowTokenClaiming;
         tokenContract = ERC20(tokenAddress);
         TokenAddressSet(
-            tokenAddress, allowTokenClaiming, tokenContract.balanceOf(this)
+            tokenAddress,
+            allowTokenClaiming,
+            tokenContract.balanceOf(address(this))
         );
     }
 
@@ -463,7 +457,7 @@ contract PresalePool {
         state = desiredState;
     }
 
-    function transferTokensToRecipient(address recipient, uint tokenBalance) internal noReentrancy returns(uint) {
+    function transferTokensToRecipient(address recipient, uint tokenBalance) internal returns(uint) {
         ParticipantState storage balance = balances[recipient];
         uint share = tokenDeposits.claimShare(
             recipient,
@@ -471,10 +465,9 @@ contract PresalePool {
             [balance.contribution, poolContributionBalance]
         );
 
+        tokenBalance -= share;
         bool succeeded = tokenContract.transfer(recipient, share);
-        if (succeeded) {
-            tokenBalance -= share;
-        } else {
+        if (!succeeded) {
             tokenDeposits.undoClaim(recipient, share);
             tokenBalance += share;
         }

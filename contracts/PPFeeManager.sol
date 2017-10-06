@@ -4,6 +4,11 @@ import "./Util.sol";
 import "./Fraction.sol";
 import "./QuotaTracker.sol";
 
+interface ERC20 {
+    function transfer(address _to, uint _value) returns (bool success);
+    function balanceOf(address _owner) constant returns (uint balance);
+}
+
 contract PPFeeManager {
     using Fraction for uint[2];
     using QuotaTracker for QuotaTracker.Data;
@@ -18,8 +23,10 @@ contract PPFeeManager {
     }
     mapping (address => Fees) public feesForContract;
     uint public outstandingFeesBalance;
+
     address[] public teamMembers;
     QuotaTracker.Data teamBalances;
+    mapping(address => QuotaTracker.Data) public teamTokenBalances;
 
     function PPFeeManager(address[] _teamMembers) payable {
         require(_teamMembers.length > 0);
@@ -78,7 +85,7 @@ contract PPFeeManager {
 
     function claimMyTeamFees() external {
         require(Util.contains(teamMembers, msg.sender));
-        sendFeesForMember(msg.sender);
+        sendFeesToMember(msg.sender);
     }
 
     function distributeTeamFees() external {
@@ -86,7 +93,27 @@ contract PPFeeManager {
         for (uint i = 0; i < teamMembers.length; i++) {
             address member = teamMembers[i];
             calledByTeamMember = calledByTeamMember || msg.sender == member;
-            sendFeesForMember(member);
+            sendFeesToMember(member);
+        }
+        require(calledByTeamMember);
+    }
+
+    function claimMyTeamTokens(address tokenAddress) external {
+        require(Util.contains(teamMembers, msg.sender));
+        QuotaTracker.Data storage trackerForToken = teamTokenBalances[tokenAddress];
+        ERC20 tokenContract = ERC20(tokenAddress);
+        sendTokensToMember(trackerForToken, tokenContract, msg.sender);
+    }
+
+    function distributeTeamTokens(address tokenAddress) external {
+        bool calledByTeamMember = false;
+        QuotaTracker.Data storage trackerForToken = teamTokenBalances[tokenAddress];
+        ERC20 tokenContract = ERC20(tokenAddress);
+
+        for (uint i = 0; i < teamMembers.length; i++) {
+            address member = teamMembers[i];
+            calledByTeamMember = calledByTeamMember || msg.sender == member;
+            sendTokensToMember(trackerForToken, tokenContract, member);
         }
         require(calledByTeamMember);
     }
@@ -133,7 +160,7 @@ contract PPFeeManager {
         );
     }
 
-    function sendFeesForMember(address member) internal {
+    function sendFeesToMember(address member) internal {
         uint share = teamBalances.claimShare(
             member,
             this.balance - outstandingFeesBalance,
@@ -143,5 +170,17 @@ contract PPFeeManager {
         require(
             member.call.value(share)()
         );
+    }
+
+    function sendTokensToMember(QuotaTracker.Data storage trackerForToken, ERC20 tokenContract, address member) internal {
+        uint share = trackerForToken.claimShare(
+            member,
+            tokenContract.balanceOf(address(this)),
+            [1, teamMembers.length]
+        );
+
+        if (!tokenContract.transfer(member, share)) {
+            trackerForToken.undoClaim(member, share);
+        }
     }
 }
