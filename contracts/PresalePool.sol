@@ -178,7 +178,6 @@ contract PresalePool {
     }
 
     function fail() external onlyAdmins onState(State.Open) {
-        poolRemainingBalance = this.balance - poolContributionBalance;
         changeState(State.Failed);
     }
 
