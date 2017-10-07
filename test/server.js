@@ -13,12 +13,12 @@ module.exports = {
                     if (err) {
                         reject(err);
                         return;
+                    } else {
+                        resolve({
+                            addresses: Object.keys(blockchain.accounts),
+                            web3: new Web3(new Web3.providers.HttpProvider("http://localhost:"+port))
+                        });
                     }
-
-                    resolve({
-                        addresses: Object.keys(blockchain.accounts),
-                        web3: new Web3(new Web3.providers.HttpProvider("http://localhost:"+port))
-                    });
                 });
             }
         );
