@@ -9,7 +9,7 @@ interface ERC20 {
     function balanceOf(address _owner) constant returns (uint balance);
 }
 
-contract PPFeeManager {
+contract PBFeeManager {
     using Fraction for uint[2];
     using QuotaTracker for QuotaTracker.Data;
 
@@ -28,7 +28,7 @@ contract PPFeeManager {
     QuotaTracker.Data teamBalances;
     mapping(address => QuotaTracker.Data) public teamTokenBalances;
 
-    function PPFeeManager(address[] _teamMembers) payable {
+    function PBFeeManager(address[] _teamMembers) payable {
         require(_teamMembers.length > 0);
         for (uint i = 0; i < _teamMembers.length; i++) {
             address addr = _teamMembers[i];

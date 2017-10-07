@@ -61,6 +61,9 @@ contract PresalePool {
     event FeeInstalled(
         uint _percentage
     );
+    event ExpectingRefund(
+        address _senderAddress
+    );
     event TokenAddressSet(
         address _tokenAddress,
         bool _allowTokenClaiming,
@@ -197,7 +200,10 @@ contract PresalePool {
     function expectRefund(address sender) payable external onlyAdmins {
         require(state == State.Paid || state == State.Refund);
         require(tokenDeposits.totalClaimed == 0);
-        refundSenderAddress = sender;
+        if (sender != refundSenderAddress) {
+            refundSenderAddress = sender;
+            ExpectingRefund(sender);
+        }
         if (state == State.Paid) {
             changeState(State.Refund);
         }

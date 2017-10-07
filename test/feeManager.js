@@ -5,7 +5,7 @@ const util = require('./util');
 
 const expect = chai.expect;
 
-describe('PPFeeManager', () => {
+describe('PBFeeManager', () => {
     let creator;
     let addresses;
     let web3;
@@ -93,7 +93,7 @@ describe('PPFeeManager', () => {
 
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );
@@ -152,7 +152,7 @@ describe('PPFeeManager', () => {
         await util.expectVMException(
             util.deployContract(
                 web3,
-                "PPFeeManager",
+                "PBFeeManager",
                 creator,
                 [[]]
             )
@@ -163,7 +163,7 @@ describe('PPFeeManager', () => {
         let team = [creator, creator, addresses[1], creator];
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );
@@ -179,7 +179,7 @@ describe('PPFeeManager', () => {
         let team = [creator];
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );
@@ -218,7 +218,7 @@ describe('PPFeeManager', () => {
         let team = [creator];
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );
@@ -239,7 +239,7 @@ describe('PPFeeManager', () => {
         let team = [creator];
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );
@@ -274,7 +274,7 @@ describe('PPFeeManager', () => {
         let team = [creator];
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );
@@ -303,7 +303,7 @@ describe('PPFeeManager', () => {
         let team = [creator];
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );
@@ -542,7 +542,7 @@ describe('PPFeeManager', () => {
         let team = [addresses[1]];
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team],
             web3.utils.toWei(3, "ether")
@@ -560,7 +560,7 @@ describe('PPFeeManager', () => {
         let team = [addresses[1]];
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team],
             web3.utils.toWei(3, "ether")

@@ -24,9 +24,9 @@ describe('fees', () => {
     });
 
     it('fees must be less than 50%', async () => {
-        let PPFeeManager = await util.deployContract(
+        let PBFeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [[addresses[1].toLowerCase()]]
         );
@@ -36,7 +36,7 @@ describe('fees', () => {
             creator,
             util.createPoolArgs({
                 feesPerEther: web3.utils.toWei(0.49, "ether"),
-                feeManager: PPFeeManager.options.address
+                feeManager: PBFeeManager.options.address
             })
         );
         await util.expectVMException(
@@ -46,7 +46,7 @@ describe('fees', () => {
                 creator,
                 util.createPoolArgs({
                     feesPerEther: web3.utils.toWei(0.5, "ether"),
-                    feeManager: PPFeeManager.options.address
+                    feeManager: PBFeeManager.options.address
                 })
             )
         );
@@ -69,7 +69,7 @@ describe('fees', () => {
     it('cannot transferFees in open state or failed state', async () => {
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );
@@ -118,7 +118,7 @@ describe('fees', () => {
     it('cannot transferFees unless tokens have been claimed', async () => {
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );
@@ -213,7 +213,7 @@ describe('fees', () => {
     it('cannot transferFees in refund state', async () => {
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );
@@ -264,7 +264,7 @@ describe('fees', () => {
     it('transferFees succeeds after tokens have been claimed', async () => {
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );
@@ -332,7 +332,7 @@ describe('fees', () => {
     it('transferAndDistributeFees succeeds after tokens have been claimed', async () => {
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [team]
         );

@@ -450,7 +450,7 @@ describe('expectRefund', () => {
     it("allows refunds even if the pool is configured with fees", async () => {
         let FeeManager = await util.deployContract(
             web3,
-            "PPFeeManager",
+            "PBFeeManager",
             creator,
             [[teamMember]]
         );
