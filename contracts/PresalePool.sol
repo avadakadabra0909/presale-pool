@@ -253,7 +253,7 @@ contract PresalePool {
             balance.exists = true;
             participants.push(msg.sender);
         }
-        Deposit(msg.sender, msg.value, poolContributionBalance);
+        Deposit(msg.sender, msg.value, balance.contribution, poolContributionBalance);
     }
 
     function withdrawAll() external {
