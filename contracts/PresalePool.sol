@@ -56,6 +56,7 @@ contract PresalePool {
     event Deposit(
         address indexed _from,
         uint _value,
+        uint _contributionTotal,
         uint _poolContributionBalance
     );
     event FeeInstalled(
