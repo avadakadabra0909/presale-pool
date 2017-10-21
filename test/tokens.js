@@ -373,13 +373,13 @@ describe('setToken', () => {
             await setUpPaidPoolWithTokens();
 
             // calling multiple consecutive times doesn't give you more tokens
-            await util.expectBalanceChange(web3, creator, web3.utils.toWei(0, "ether"), () => {
-                return util.expectBalanceChange(web3, buyer1, web3.utils.toWei(4, "ether"), () => {
-                    return util.expectBalanceChange(web3, buyer2, web3.utils.toWei(1, "ether"), () => {
+            await util.expectBalanceChanges(
+                web3,
+                {creator: web3.utils.toWei(0, "ether"), buyer1: web3.utils.toWei(4, "ether"), buyer2: web3.utils.toWei(1, "ether")},
+                () => {
                         return util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
-                    });
-                });
-            });
+                }
+            );
             await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
                 return util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
             });
@@ -418,16 +418,16 @@ describe('setToken', () => {
             await setUpPaidPoolWithTokens();
 
             // calling multiple consecutive times doesn't give you more tokens
-            await util.expectBalanceChange(web3, creator, web3.utils.toWei(0, "ether"), () => {
-                return util.expectBalanceChange(web3, buyer1, web3.utils.toWei(4, "ether"), () => {
-                    return util.expectBalanceChange(web3, buyer2, web3.utils.toWei(1, "ether"), () => {
-                        return util.methodWithGas(
-                            PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
-                            creator
-                        );
-                    });
-                });
-            });
+            await util.expectBalanceChanges(
+                web3,
+                {creator: web3.utils.toWei(0, "ether"), buyer1: web3.utils.toWei(4, "ether"), buyer2: web3.utils.toWei(1, "ether")},
+                () => {
+                    return util.methodWithGas(
+                        PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
+                        creator
+                    );
+                }
+            );
             await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
                 return util.methodWithGas(
                     PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
