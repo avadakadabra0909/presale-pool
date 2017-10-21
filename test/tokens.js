@@ -317,67 +317,155 @@ describe('setToken', () => {
             await setUpPaidPoolWithTokens();
 
             // calling multiple consecutive times doesn't give you more tokens
-            await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
-            await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
+            await util.expectBalanceChange(web3, buyer1, web3.utils.toWei(4, "ether"), () => {
+                return util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
+            });
+            await util.expectBalanceChange(web3, buyer1, web3.utils.toWei(0, "ether"), () => {
+                return util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
+            });
 
             await tokenBalanceEquals(creator, 0);
             await tokenBalanceEquals(buyer1, 20);
             await tokenBalanceEquals(buyer2, 0);
 
+            // Only buyer1 has taken tokens, so the remaining balance should be 0'd out
+            let expectedBalances = {};
+            expectedBalances[creator] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(2, "ether")
+            }
+            expectedBalances[buyer1] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(1, "ether")
+            }
+            expectedBalances[buyer2] = {
+                remaining: web3.utils.toWei(1, "ether"),
+                contribution: web3.utils.toWei(0, "ether")
+            }
+            await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1, "ether"));
+
             await transferMoreTokensToPool(18);
-            await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
+
+            await util.expectBalanceChange(web3, buyer1, web3.utils.toWei(0, "ether"), () => {
+                return util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
+            });
 
             await tokenBalanceEquals(creator, 0);
             await tokenBalanceEquals(buyer1, 26);
             await tokenBalanceEquals(buyer2, 0);
+
+            expectedBalances[creator] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(2, "ether")
+            }
+            expectedBalances[buyer1] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(1, "ether")
+            }
+            expectedBalances[buyer2] = {
+                remaining: web3.utils.toWei(1, "ether"),
+                contribution: web3.utils.toWei(0, "ether")
+            }
+            await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1, "ether"));
         });
 
         it("transferAllTokens()", async () => {
             await setUpPaidPoolWithTokens();
 
             // calling multiple consecutive times doesn't give you more tokens
-            await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
-            await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
+            await util.expectBalanceChange(web3, creator, web3.utils.toWei(0, "ether"), () => {
+                return util.expectBalanceChange(web3, buyer1, web3.utils.toWei(4, "ether"), () => {
+                    return util.expectBalanceChange(web3, buyer2, web3.utils.toWei(1, "ether"), () => {
+                        return util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
+                    });
+                });
+            });
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+                return util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
+            });
 
             await tokenBalanceEquals(creator, 40);
             await tokenBalanceEquals(buyer1, 20);
             await tokenBalanceEquals(buyer2, 0);
 
             await transferMoreTokensToPool(18);
-            await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
+
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+                return util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
+            });
 
             await tokenBalanceEquals(creator, 52);
             await tokenBalanceEquals(buyer1, 26);
             await tokenBalanceEquals(buyer2, 0);
+
+            let expectedBalances = {};
+            expectedBalances[creator] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(2, "ether")
+            }
+            expectedBalances[buyer1] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(1, "ether")
+            }
+            expectedBalances[buyer2] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(0, "ether")
+            }
+            await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
         });
 
         it("transferTokensTo()", async () => {
             await setUpPaidPoolWithTokens();
 
             // calling multiple consecutive times doesn't give you more tokens
-            await util.methodWithGas(
-                PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
-                creator
-            );
-            await util.methodWithGas(
-                PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
-                creator
-            );
+            await util.expectBalanceChange(web3, creator, web3.utils.toWei(0, "ether"), () => {
+                return util.expectBalanceChange(web3, buyer1, web3.utils.toWei(4, "ether"), () => {
+                    return util.expectBalanceChange(web3, buyer2, web3.utils.toWei(1, "ether"), () => {
+                        return util.methodWithGas(
+                            PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
+                            creator
+                        );
+                    });
+                });
+            });
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+                return util.methodWithGas(
+                    PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
+                    creator
+                );
+            });
 
             await tokenBalanceEquals(creator, 40);
             await tokenBalanceEquals(buyer1, 20);
             await tokenBalanceEquals(buyer2, 0);
 
             await transferMoreTokensToPool(18);
-            await util.methodWithGas(
-                PresalePool.methods.transferTokensTo([creator]),
-                creator
-            );
+
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+                return util.methodWithGas(
+                    PresalePool.methods.transferTokensTo([creator]),
+                    creator
+                );
+            });
 
             await tokenBalanceEquals(creator, 52);
             await tokenBalanceEquals(buyer1, 20);
             await tokenBalanceEquals(buyer2, 0);
 
+            let expectedBalances = {};
+            expectedBalances[creator] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(2, "ether")
+            }
+            expectedBalances[buyer1] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(1, "ether")
+            }
+            expectedBalances[buyer2] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(0, "ether")
+            }
+            await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
         });
 
         it("skips blacklisted sender", async () => {
