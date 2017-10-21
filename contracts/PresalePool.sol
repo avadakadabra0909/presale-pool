@@ -287,29 +287,34 @@ contract PresalePool {
 
     function withdrawAllFor(address recipient) internal {
         ParticipantState storage balance = balances[recipient];
-        uint total = balance.remaining;
-        balance.remaining = 0;
 
-        if (state == State.Open || state == State.Failed) {
-            total += balance.contribution;
-            poolContributionBalance -= balance.contribution;
-            balance.contribution = 0;
-        } else if (state == State.Refund) {
-            uint share = etherRefunds.claimShare(
-                recipient,
-                this.balance - poolRemainingBalance,
-                [balance.contribution, poolContributionBalance]
-            );
-            poolRemainingBalance -= total;
-            total += share;
+        if (balance.remaining + balance.contribution == 0) {
+            return;
         } else {
-            require(state == State.Paid);
-        }
+            uint total = balance.remaining;
+            balance.remaining = 0;
 
-        Withdrawl(recipient, total, 0, 0, poolContributionBalance);
-        require(
-            recipient.call.value(total)()
-        );
+            if (state == State.Open || state == State.Failed) {
+                total += balance.contribution;
+                poolContributionBalance -= balance.contribution;
+                balance.contribution = 0;
+            } else if (state == State.Refund) {
+                uint share = etherRefunds.claimShare(
+                    recipient,
+                    this.balance - poolRemainingBalance,
+                    [balance.contribution, poolContributionBalance]
+                );
+                poolRemainingBalance -= total;
+                total += share;
+            } else {
+                require(state == State.Paid);
+            }
+
+            Withdrawl(recipient, total, 0, 0, poolContributionBalance);
+            require(
+                recipient.call.value(total)()
+            );
+        }
     }
 
     function transferMyTokens() external canClaimTokens {
@@ -319,7 +324,14 @@ contract PresalePool {
     }
 
     function transferAllTokens() external canClaimTokens {
-        this.transferTokensTo(participants);
+        uint tokenBalance = tokenContract.balanceOf(address(this));
+
+        for (uint i = 0; i < participants.length; i++) {
+            if (tokenBalance > 0) {
+                tokenBalance = transferTokensToRecipient(participants[i], tokenBalance);
+            }
+            withdrawAllFor(participants[i]);
+        }
     }
 
     function transferTokensTo(address[] recipients) external canClaimTokens {
