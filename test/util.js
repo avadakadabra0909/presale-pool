@@ -200,18 +200,18 @@ async function expectBalanceChangeAddresses(web3, addresses, expectedDifference,
     }
 }
 
-async function expectBalanceChanges(web3, addressesWithDifferences, operation) {
-    let beforeBalances = {};
+async function expectBalanceChanges(web3, addresses, differences, operation) {
+    let beforeBalances = [];
 
-    for (var address in addressesWithDifferences) {
-        beforeBalances[address] = await web3.eth.getBalance(address);
+    for (let i = 0; i < addresses.length; i++) {
+        beforeBalances.push(await web3.eth.getBalance(addresses[i]));
     }
     await operation();
 
-    for (var address in addressesWithDifferences) {
-        let balanceAfterRefund = await web3.eth.getBalance(address);
-        let difference = parseInt(balanceAfterRefund) - parseInt(beforeBalances[address]);
-        let expectedDifference = addressesWithDifferences(address);
+    for (let i = 0; i < addresses.length; i++) {
+        let balanceAfterRefund = await web3.eth.getBalance(addresses[i]);
+        let difference = parseInt(balanceAfterRefund) - parseInt(beforeBalances[i]);
+        let expectedDifference = differences[i];
         if (expectedDifference == 0) {
             let differenceInEther = parseFloat(
                 web3.utils.fromWei(difference, "ether")
