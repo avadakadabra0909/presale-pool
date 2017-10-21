@@ -242,6 +242,7 @@ module.exports = {
     createPoolArgs: createPoolArgs,
     deployContract: deployContract,
     expectBalanceChange: expectBalanceChange,
+    expectBalanceChanges: expectBalanceChanges,
     expectBalanceChangeAddresses: expectBalanceChangeAddresses,
     expectVMException: expectVMException,
     getBalances: getBalances,
