@@ -11,7 +11,7 @@ interface ERC20 {
 interface FeeManager {
     function create(uint _feesPerEther, address[] _recipients);
     function sendFees() payable;
-    function distrbuteFees(address[] _recipients);
+    function distributeFees(address[] _recipients);
 }
 
 contract PresalePool {
@@ -64,6 +64,10 @@ contract PresalePool {
     event FeeInstalled(
         uint _percentage
     );
+    event FeesTransferred(
+        uint _fees
+    );
+    event FeesDistributed();
     event ExpectingRefund(
         address _senderAddress
     );
@@ -220,12 +224,14 @@ contract PresalePool {
         require(tokenDeposits.totalClaimed > 0);
         uint amount = totalFees;
         totalFees = 0;
+        FeesTransferred(amount);
         feeManager.sendFees.value(amount)();
     }
 
     function transferAndDistributeFees() external {
         transferFees();
-        feeManager.distrbuteFees(admins);
+        FeesDistributed();
+        feeManager.distributeFees(admins);
     }
 
     function setToken(address tokenAddress, bool _allowTokenClaiming) external onlyAdmins {
@@ -316,7 +322,13 @@ contract PresalePool {
             require(state == State.Paid);
         }
 
-        Withdrawl(recipient, total, 0, 0, poolContributionBalance);
+        Withdrawl(
+            recipient,
+            total,
+            balance.remaining,
+            balance.contribution,
+            poolContributionBalance
+        );
         require(
             recipient.call.value(total)()
         );
