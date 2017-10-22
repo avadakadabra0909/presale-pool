@@ -424,11 +424,11 @@ contract PresalePool {
                 participant = toRebalance[i];
                 balance = balances[participant];
 
-                poolContributionBalance -= balance.contribution;
-                balance.remaining += balance.contribution;
-                balance.contribution = 0;
-                (balance.contribution, balance.remaining) = getContribution(participant, 0);
-                poolContributionBalance += balance.contribution;
+                uint newContribution;
+                uint newRemaining;
+                (newContribution, newRemaining) = getContribution(participant, 0);
+                poolContributionBalance = poolContributionBalance - balance.contribution + newContribution;
+                (balance.contribution, balance.remaining) = (newContribution, newRemaining);
 
                 ContributionAdjusted(
                     participant,
