@@ -146,7 +146,11 @@ contract PresalePool {
         validateContributionSettings();
         ContributionSettingsChanged(minContribution, maxContribution, maxPoolBalance);
 
-        restricted = _restricted;
+        if (_restricted) {
+            restricted = true;
+            WhitelistEnabled();
+        }
+
         balances[msg.sender].whitelisted = true;
 
         for (uint i = 0; i < _admins.length; i++) {
