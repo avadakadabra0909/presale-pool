@@ -6,7 +6,6 @@ const util = require('./util');
 const expect = chai.expect;
 
 describe('setToken', () => {
-    let defaultPoolArgs = [0, 0, 0, []];
     let creator;
     let buyer1;
     let buyer2;
@@ -36,7 +35,10 @@ describe('setToken', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
         TestToken = await util.deployContract(
             web3,

@@ -387,8 +387,6 @@ contract PresalePool {
         bool recompute = (minContribution < _minContribution);
         // we lowered the maxContribution threshold
         recompute = recompute || (maxContribution > _maxContribution);
-        // we did not have a maxContribution threshold and now we do
-        recompute = recompute || (maxContribution == 0 && _maxContribution > 0);
         // we want to make maxPoolBalance lower than the current pool balance
         recompute = recompute || (poolContributionBalance > _maxPoolBalance);
 
@@ -484,13 +482,12 @@ contract PresalePool {
     }
 
     function validateContributionSettings() internal constant {
-        if (maxContribution > 0) {
-            require(maxContribution >= minContribution);
-        }
-        if (maxPoolBalance > 0) {
-            require(maxPoolBalance >= minContribution);
-            require(maxPoolBalance >= maxContribution);
-        }
+        uint maxAllowed = 1e9 ether;
+        require(maxContribution <= maxAllowed);
+        require(maxPoolBalance <= maxAllowed);
+        require(minContribution <= maxAllowed);
+
+        require(minContribution <= maxContribution && maxContribution <= maxPoolBalance);
     }
 
     function included(address participant) internal constant returns (bool) {

@@ -41,7 +41,10 @@ describe('expectRefund', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
 
         await util.expectVMException(
@@ -65,7 +68,10 @@ describe('expectRefund', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
 
         await util.methodWithGas(PresalePool.methods.fail(), creator);
@@ -91,7 +97,10 @@ describe('expectRefund', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
 
         await util.methodWithGas(
@@ -122,7 +131,10 @@ describe('expectRefund', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
 
         await util.methodWithGas(
@@ -167,7 +179,10 @@ describe('expectRefund', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
 
         await util.methodWithGas(
@@ -215,7 +230,10 @@ describe('expectRefund', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
 
         await util.methodWithGas(
@@ -274,7 +292,10 @@ describe('expectRefund', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
 
         await util.methodWithGas(
@@ -323,7 +344,10 @@ describe('expectRefund', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
 
         await util.methodWithGas(
@@ -372,7 +396,10 @@ describe('expectRefund', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
 
         await util.methodWithGas(
@@ -461,7 +488,9 @@ describe('expectRefund', () => {
             creator,
             util.createPoolArgs({
                 feesPerEther: web3.utils.toWei(0.25, "ether"),
-                feeManager: FeeManager.options.address
+                feeManager: FeeManager.options.address,
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
             })
         );
 

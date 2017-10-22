@@ -33,7 +33,10 @@ describe('pay to presale address', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
     });
 
@@ -130,7 +133,14 @@ describe('pay to presale address', () => {
             web3.utils.toWei(1, "ether")
         );
 
-        await util.methodWithGas(PresalePool.methods.setContributionSettings(web3.utils.toWei(2, "ether"), 0, 0), creator)
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(
+                web3.utils.toWei(2, "ether"),
+                web3.utils.toWei(50, "ether"),
+                web3.utils.toWei(50, "ether")
+            ),
+            creator
+        )
 
         let expectedBalances = {}
         expectedBalances[buyer1] = {
@@ -167,7 +177,14 @@ describe('pay to presale address', () => {
             web3.utils.toWei(1, "ether")
         );
 
-        await util.methodWithGas(PresalePool.methods.setContributionSettings(0, web3.utils.toWei(2, "ether"), 0), creator)
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(
+                0,
+                web3.utils.toWei(2, "ether"),
+                web3.utils.toWei(50, "ether")
+            ),
+            creator
+        )
 
         let expectedBalances = {}
         expectedBalances[buyer1] = {
@@ -204,7 +221,14 @@ describe('pay to presale address', () => {
             web3.utils.toWei(1, "ether")
         );
 
-        await util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, web3.utils.toWei(2, "ether")), creator)
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(
+                0,
+                web3.utils.toWei(2, "ether"),
+                web3.utils.toWei(2, "ether")
+            ),
+            creator
+        )
 
         let expectedBalances = {}
         expectedBalances[buyer1] = {
@@ -258,7 +282,9 @@ describe('pay to presale address', () => {
 
         await util.methodWithGas(
             PresalePool.methods.setContributionSettings(
-                0, web3.utils.toWei(2, "ether"), web3.utils.toWei(3, "ether")
+                0,
+                web3.utils.toWei(2, "ether"),
+                web3.utils.toWei(3, "ether")
             ),
             creator
         )
@@ -361,7 +387,9 @@ describe('pay to presale address', () => {
 
         await util.methodWithGas(
             PresalePool.methods.setContributionSettings(
-                0, web3.utils.toWei(2, "ether"), 0
+                0,
+                web3.utils.toWei(2, "ether"),
+                web3.utils.toWei(50, "ether")
             ),
             creator
         );

@@ -6,7 +6,6 @@ const util = require('./util');
 const expect = chai.expect;
 
 describe('whitelist', () => {
-    let defaultPoolArgs = [0, 0, 0, []];
     let creator;
     let buyer1;
     let buyer2;
@@ -30,7 +29,10 @@ describe('whitelist', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
     });
 
@@ -235,7 +237,11 @@ describe('whitelist', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(12, "ether"));
 
         await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, web3.utils.toWei(5, "ether"), 0),
+            PresalePool.methods.setContributionSettings(
+                0,
+                web3.utils.toWei(5, "ether"),
+                web3.utils.toWei(50, "ether")
+            ),
             creator
         );
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(12, "ether"));
@@ -298,7 +304,11 @@ describe('whitelist', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(12, "ether"));
 
         await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 0, web3.utils.toWei(6, "ether")),
+            PresalePool.methods.setContributionSettings(
+                0,
+                web3.utils.toWei(6, "ether"),
+                web3.utils.toWei(6, "ether")
+            ),
             creator
         );
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(12, "ether"));
@@ -354,7 +364,11 @@ describe('whitelist', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(8, "ether"));
 
         await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(web3.utils.toWei(5, "ether"), 0, 0),
+            PresalePool.methods.setContributionSettings(
+                web3.utils.toWei(5, "ether"),
+                web3.utils.toWei(50, "ether"),
+                web3.utils.toWei(50, "ether"),
+            ),
             creator
         );
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(8, "ether"));

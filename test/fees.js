@@ -30,15 +30,19 @@ describe('fees', () => {
             creator,
             [[addresses[1].toLowerCase()]]
         );
+
         await util.deployContract(
             web3,
             "PresalePool",
             creator,
             util.createPoolArgs({
                 feesPerEther: web3.utils.toWei(0.49, "ether"),
-                feeManager: PBFeeManager.options.address
+                feeManager: PBFeeManager.options.address,
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
             })
         );
+
         await util.expectVMException(
             util.deployContract(
                 web3,
@@ -46,7 +50,9 @@ describe('fees', () => {
                 creator,
                 util.createPoolArgs({
                     feesPerEther: web3.utils.toWei(0.5, "ether"),
-                    feeManager: PBFeeManager.options.address
+                    feeManager: PBFeeManager.options.address,
+                    maxContribution: web3.utils.toWei(50, "ether"),
+                    maxPoolBalance: web3.utils.toWei(50, "ether")
                 })
             )
         );
@@ -60,7 +66,9 @@ describe('fees', () => {
                 creator,
                 util.createPoolArgs({
                     feesPerEther: web3.utils.toWei(0.49, "ether"),
-                    feeManager: addresses[1].toLowerCase()
+                    feeManager: addresses[1].toLowerCase(),
+                    maxContribution: web3.utils.toWei(50, "ether"),
+                    maxPoolBalance: web3.utils.toWei(50, "ether")
                 })
             )
         );
@@ -79,8 +87,16 @@ describe('fees', () => {
             creator,
             util.createPoolArgs({
                 feesPerEther: web3.utils.toWei(0.2, "ether"),
-                feeManager: FeeManager.options.address
+                feeManager: FeeManager.options.address,
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
             })
+        );
+
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            creator,
+            web3.utils.toWei(2, "ether")
         );
 
         await util.expectVMException(
@@ -128,7 +144,9 @@ describe('fees', () => {
             creator,
             util.createPoolArgs({
                 feesPerEther: web3.utils.toWei(0.2, "ether"),
-                feeManager: FeeManager.options.address
+                feeManager: FeeManager.options.address,
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
             })
         );
         let blacklisted = addresses[2];
@@ -223,7 +241,9 @@ describe('fees', () => {
             creator,
             util.createPoolArgs({
                 feesPerEther: web3.utils.toWei(0.2, "ether"),
-                feeManager: FeeManager.options.address
+                feeManager: FeeManager.options.address,
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
             })
         );
 
@@ -274,7 +294,9 @@ describe('fees', () => {
             creator,
             util.createPoolArgs({
                 feesPerEther: web3.utils.toWei(0.02, "ether"),
-                feeManager: FeeManager.options.address
+                feeManager: FeeManager.options.address,
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
             })
         );
         let TestToken = await util.deployContract(
@@ -342,7 +364,9 @@ describe('fees', () => {
             creator,
             util.createPoolArgs({
                 feesPerEther: web3.utils.toWei(0.02, "ether"),
-                feeManager: FeeManager.options.address
+                feeManager: FeeManager.options.address,
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
             })
         );
         let TestToken = await util.deployContract(

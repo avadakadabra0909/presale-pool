@@ -109,7 +109,20 @@ describe('deploy', () => {
                 creator,
                 util.createPoolArgs({
                     minContribution: 3,
-                    maxContribution: 2
+                    maxContribution: 2,
+                    maxPoolBalance: 5
+                })
+            )
+        );
+        await util.expectVMException(
+            util.deployContract(
+                web3,
+                "PresalePool",
+                creator,
+                util.createPoolArgs({
+                    minContribution: 3,
+                    maxContribution: 0,
+                    maxPoolBalance: 5
                 })
             )
         );
@@ -118,6 +131,7 @@ describe('deploy', () => {
                 web3, "PresalePool",
                 creator,
                 util.createPoolArgs({
+                    minContribution: 0,
                     maxContribution: 2,
                     maxPoolBalance: 1
                 })
@@ -129,7 +143,8 @@ describe('deploy', () => {
                 creator,
                 util.createPoolArgs({
                     minContribution: 3,
-                    maxPoolBalance: 2
+                    maxPoolBalance: 2,
+                    maxContribution: 4
                 })
             )
         );
