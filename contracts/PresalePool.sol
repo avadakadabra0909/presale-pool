@@ -287,34 +287,33 @@ contract PresalePool {
 
     function withdrawAllFor(address recipient) internal {
         ParticipantState storage balance = balances[recipient];
-
         if (balance.remaining + balance.contribution == 0) {
             return;
-        } else {
-            uint total = balance.remaining;
-            balance.remaining = 0;
-
-            if (state == State.Open || state == State.Failed) {
-                total += balance.contribution;
-                poolContributionBalance -= balance.contribution;
-                balance.contribution = 0;
-            } else if (state == State.Refund) {
-                uint share = etherRefunds.claimShare(
-                    recipient,
-                    this.balance - poolRemainingBalance,
-                    [balance.contribution, poolContributionBalance]
-                );
-                poolRemainingBalance -= total;
-                total += share;
-            } else {
-                require(state == State.Paid);
-            }
-
-            Withdrawl(recipient, total, 0, 0, poolContributionBalance);
-            require(
-                recipient.call.value(total)()
-            );
         }
+
+        uint total = balance.remaining;
+        balance.remaining = 0;
+
+        if (state == State.Open || state == State.Failed) {
+            total += balance.contribution;
+            poolContributionBalance -= balance.contribution;
+            balance.contribution = 0;
+        } else if (state == State.Refund) {
+            uint share = etherRefunds.claimShare(
+                recipient,
+                this.balance - poolRemainingBalance,
+                [balance.contribution, poolContributionBalance]
+            );
+            poolRemainingBalance -= total;
+            total += share;
+        } else {
+            require(state == State.Paid);
+        }
+
+        Withdrawl(recipient, total, 0, 0, poolContributionBalance);
+        require(
+            recipient.call.value(total)()
+        );
     }
 
     function transferMyTokens() external canClaimTokens {
