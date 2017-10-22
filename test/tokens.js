@@ -243,7 +243,7 @@ describe('setToken', () => {
 
             await util.methodWithGas(
                 PresalePool.methods.setContributionSettings(
-                    0, web3.utils.toWei(2, "ether"), web3.utils.toWei(3, "ether")
+                    0, web3.utils.toWei(2, "ether"), web3.utils.toWei(3, "ether"), []
                 ),
                 creator
             );

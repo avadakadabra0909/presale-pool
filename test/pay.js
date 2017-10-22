@@ -137,7 +137,8 @@ describe('pay to presale address', () => {
             PresalePool.methods.setContributionSettings(
                 web3.utils.toWei(2, "ether"),
                 web3.utils.toWei(50, "ether"),
-                web3.utils.toWei(50, "ether")
+                web3.utils.toWei(50, "ether"),
+                []
             ),
             creator
         )
@@ -181,7 +182,8 @@ describe('pay to presale address', () => {
             PresalePool.methods.setContributionSettings(
                 0,
                 web3.utils.toWei(2, "ether"),
-                web3.utils.toWei(50, "ether")
+                web3.utils.toWei(50, "ether"),
+                []
             ),
             creator
         )
@@ -225,7 +227,8 @@ describe('pay to presale address', () => {
             PresalePool.methods.setContributionSettings(
                 0,
                 web3.utils.toWei(2, "ether"),
-                web3.utils.toWei(2, "ether")
+                web3.utils.toWei(2, "ether"),
+                []
             ),
             creator
         )
@@ -284,7 +287,8 @@ describe('pay to presale address', () => {
             PresalePool.methods.setContributionSettings(
                 0,
                 web3.utils.toWei(2, "ether"),
-                web3.utils.toWei(3, "ether")
+                web3.utils.toWei(3, "ether"),
+                []
             ),
             creator
         )
@@ -389,7 +393,8 @@ describe('pay to presale address', () => {
             PresalePool.methods.setContributionSettings(
                 0,
                 web3.utils.toWei(2, "ether"),
-                web3.utils.toWei(50, "ether")
+                web3.utils.toWei(50, "ether"),
+                []
             ),
             creator
         );

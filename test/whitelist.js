@@ -240,7 +240,8 @@ describe('whitelist', () => {
             PresalePool.methods.setContributionSettings(
                 0,
                 web3.utils.toWei(5, "ether"),
-                web3.utils.toWei(50, "ether")
+                web3.utils.toWei(50, "ether"),
+                []
             ),
             creator
         );
@@ -307,7 +308,8 @@ describe('whitelist', () => {
             PresalePool.methods.setContributionSettings(
                 0,
                 web3.utils.toWei(6, "ether"),
-                web3.utils.toWei(6, "ether")
+                web3.utils.toWei(6, "ether"),
+                []
             ),
             creator
         );
@@ -368,6 +370,7 @@ describe('whitelist', () => {
                 web3.utils.toWei(5, "ether"),
                 web3.utils.toWei(50, "ether"),
                 web3.utils.toWei(50, "ether"),
+                []
             ),
             creator
         );

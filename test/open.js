@@ -38,52 +38,52 @@ describe('open state', () => {
 
     it('validates contribution settings in setContributionSettings', async () => {
         // the call below succeeds if and only if minContribution <=  maxContribution <= maxPoolTotal
-        // PresalePool.methods.setContributionSettings(minContribution, maxContribution, maxPoolTotal)
+        // PresalePool.methods.setContributionSettings(minContribution, maxContribution, maxPoolTotal, [])
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.setContributionSettings(3, 2, 5),
+                PresalePool.methods.setContributionSettings(3, 2, 5, []),
                 creator
             )
         );
         // maxPoolBalance must exceed maxContribution
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.setContributionSettings(0, 2, 1),
+                PresalePool.methods.setContributionSettings(0, 2, 1, []),
                 creator
             )
         );
         // maxPoolBalance must exceed minContribution
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.setContributionSettings(2, 2, 1),
+                PresalePool.methods.setContributionSettings(2, 2, 1, []),
                 creator
             )
         );
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.setContributionSettings(3, 2, 1),
+                PresalePool.methods.setContributionSettings(3, 2, 1, []),
                 creator
             )
         );
 
         await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 2, 3),
+            PresalePool.methods.setContributionSettings(0, 2, 3, []),
             creator
         );
         await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(1, 2, 3),
+            PresalePool.methods.setContributionSettings(1, 2, 3, []),
             creator
         );
         await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 2, 2),
+            PresalePool.methods.setContributionSettings(0, 2, 2, []),
             creator
         );
         await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 0, 3),
+            PresalePool.methods.setContributionSettings(0, 0, 3, []),
             creator
         );
         await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 0, 0),
+            PresalePool.methods.setContributionSettings(0, 0, 0, []),
             creator
         );
     });
@@ -243,7 +243,8 @@ describe('open state', () => {
             PresalePool.methods.setContributionSettings(
                 web3.utils.toWei(2, "ether"),
                 web3.utils.toWei(50, "ether"),
-                web3.utils.toWei(50, "ether")
+                web3.utils.toWei(50, "ether"),
+                []
             ),
             creator
         )
@@ -298,7 +299,8 @@ describe('open state', () => {
             PresalePool.methods.setContributionSettings(
                 0,
                 web3.utils.toWei(2, "ether"),
-                web3.utils.toWei(50, "ether")
+                web3.utils.toWei(50, "ether"),
+                []
             ),
             creator
         )
@@ -367,7 +369,8 @@ describe('open state', () => {
             PresalePool.methods.setContributionSettings(
                 0,
                 web3.utils.toWei(2, "ether"),
-                web3.utils.toWei(2, "ether")
+                web3.utils.toWei(2, "ether"),
+                []
             ),
             creator
         )
