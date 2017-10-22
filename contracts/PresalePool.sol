@@ -257,30 +257,7 @@ contract PresalePool {
     }
 
     function withdrawAll() external {
-        ParticipantState storage balance = balances[msg.sender];
-        uint total = balance.remaining;
-        balance.remaining = 0;
-
-        if (state == State.Open || state == State.Failed) {
-            total += balance.contribution;
-            poolContributionBalance -= balance.contribution;
-            balance.contribution = 0;
-        } else if (state == State.Refund) {
-            uint share = etherRefunds.claimShare(
-                msg.sender,
-                this.balance - poolRemainingBalance,
-                [balance.contribution, poolContributionBalance]
-            );
-            poolRemainingBalance -= total;
-            total += share;
-        } else {
-            require(state == State.Paid);
-        }
-
-        Withdrawl(msg.sender, total, 0, 0, poolContributionBalance);
-        require(
-            msg.sender.call.value(total)()
-        );
+        withdrawAllFor(msg.sender);
     }
 
     function withdraw(uint amount) external onState(State.Open) {
@@ -308,20 +285,45 @@ contract PresalePool {
         );
     }
 
-    function transferMyTokens() external canClaimTokens {
-        uint tokenBalance = tokenContract.balanceOf(address(this));
-        transferTokensToRecipient(msg.sender, tokenBalance);
+    function withdrawAllFor(address recipient) internal {
+        ParticipantState storage balance = balances[recipient];
+        if (balance.remaining + balance.contribution == 0) {
+            return;
+        }
+
+        uint total = balance.remaining;
+        balance.remaining = 0;
+
+        if (state == State.Open || state == State.Failed) {
+            total += balance.contribution;
+            poolContributionBalance -= balance.contribution;
+            balance.contribution = 0;
+        } else if (state == State.Refund) {
+            uint share = etherRefunds.claimShare(
+                recipient,
+                this.balance - poolRemainingBalance,
+                [balance.contribution, poolContributionBalance]
+            );
+            poolRemainingBalance -= total;
+            total += share;
+        } else {
+            require(state == State.Paid);
+        }
+
+        Withdrawl(recipient, total, 0, 0, poolContributionBalance);
+        require(
+            recipient.call.value(total)()
+        );
     }
 
     function transferAllTokens() external canClaimTokens {
         uint tokenBalance = tokenContract.balanceOf(address(this));
 
         for (uint i = 0; i < participants.length; i++) {
-            tokenBalance = transferTokensToRecipient(participants[i], tokenBalance);
-
-            if (tokenBalance == 0) {
-                break;
+            if (tokenBalance > 0) {
+                tokenBalance = transferTokensToRecipient(participants[i], tokenBalance);
             }
+            withdrawAllFor(participants[i]);
         }
     }
 
@@ -329,11 +331,10 @@ contract PresalePool {
         uint tokenBalance = tokenContract.balanceOf(address(this));
 
         for (uint i = 0; i < recipients.length; i++) {
-            tokenBalance = transferTokensToRecipient(recipients[i], tokenBalance);
-
-            if (tokenBalance == 0) {
-                break;
+            if (tokenBalance > 0) {
+                tokenBalance = transferTokensToRecipient(recipients[i], tokenBalance);
             }
+            withdrawAllFor(recipients[i]);
         }
     }
 

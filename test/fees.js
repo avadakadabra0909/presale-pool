@@ -173,7 +173,7 @@ describe('fees', () => {
 
         let nonContributor = addresses[3];
         await util.methodWithGas(
-            PresalePool.methods.transferMyTokens(),
+            PresalePool.methods.transferTokensTo([nonContributor]),
             nonContributor
         );
 
@@ -191,7 +191,7 @@ describe('fees', () => {
         );
 
         await util.methodWithGas(
-            PresalePool.methods.transferMyTokens(),
+            PresalePool.methods.transferTokensTo([blacklisted]),
             blacklisted
         );
 
@@ -299,7 +299,7 @@ describe('fees', () => {
         );
 
         await util.methodWithGas(
-            PresalePool.methods.transferMyTokens(),
+            PresalePool.methods.transferTokensTo([creator]),
             creator
         );
 
@@ -373,7 +373,7 @@ describe('fees', () => {
         );
 
         await util.methodWithGas(
-            PresalePool.methods.transferMyTokens(),
+            PresalePool.methods.transferTokensTo([buyer1]),
             buyer1
         );
 

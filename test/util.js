@@ -179,16 +179,26 @@ async function verifyState(web3, PresalePool, expectedBalances, expectedPoolBala
 }
 
 async function expectBalanceChangeAddresses(web3, addresses, expectedDifference, operation) {
-    let beforeBalances = [];
+    return expectBalanceChanges(
+        web3,
+        addresses,
+        Array(addresses.length).fill(expectedDifference),
+        operation
+    );
+}
 
+async function expectBalanceChanges(web3, addresses, differences, operation) {
+    let beforeBalances = [];
 
     for (let i = 0; i < addresses.length; i++) {
         beforeBalances.push(await web3.eth.getBalance(addresses[i]));
     }
     await operation();
+
     for (let i = 0; i < addresses.length; i++) {
         let balanceAfterRefund = await web3.eth.getBalance(addresses[i]);
         let difference = parseInt(balanceAfterRefund) - parseInt(beforeBalances[i]);
+        let expectedDifference = differences[i];
         if (expectedDifference == 0) {
             let differenceInEther = parseFloat(
                 web3.utils.fromWei(difference, "ether")
@@ -219,6 +229,7 @@ module.exports = {
     createPoolArgs: createPoolArgs,
     deployContract: deployContract,
     expectBalanceChange: expectBalanceChange,
+    expectBalanceChanges: expectBalanceChanges,
     expectBalanceChangeAddresses: expectBalanceChangeAddresses,
     expectVMException: expectVMException,
     getBalances: getBalances,

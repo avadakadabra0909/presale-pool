@@ -113,7 +113,7 @@ describe('setToken', () => {
             PresalePool.methods.setToken(TestToken.options.address, true),
             creator
         );
-        await util.methodWithGas(PresalePool.methods.transferMyTokens(), creator);
+        await util.methodWithGas(PresalePool.methods.transferTokensTo([creator]), creator);
 
         let OtherTestToken = await util.deployContract(
             web3,
@@ -172,9 +172,6 @@ describe('setToken', () => {
         );
 
         await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.transferMyTokens(), creator)
-        );
-        await util.expectVMException(
             util.methodWithGas(PresalePool.methods.transferAllTokens(), creator)
         );
         await util.expectVMException(
@@ -183,9 +180,6 @@ describe('setToken', () => {
     });
 
     it("tokens cant be claimed in open state", async () => {
-        await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.transferMyTokens(), creator)
-        );
         await util.expectVMException(
             util.methodWithGas(PresalePool.methods.transferAllTokens(), creator)
         );
@@ -196,9 +190,6 @@ describe('setToken', () => {
 
     it("tokens cant be claimed in failed state", async () => {
         await util.methodWithGas(PresalePool.methods.fail(), creator);
-        await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.transferMyTokens(), creator)
-        );
         await util.expectVMException(
             util.methodWithGas(PresalePool.methods.transferAllTokens(), creator)
         );
@@ -222,9 +213,6 @@ describe('setToken', () => {
             creator
         );
 
-        await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.transferMyTokens(), creator)
-        );
         await util.expectVMException(
             util.methodWithGas(PresalePool.methods.transferAllTokens(), creator)
         );
@@ -313,71 +301,105 @@ describe('setToken', () => {
             ).to.equal(amount);
         }
 
-        it("transferMyTokens()", async () => {
-            await setUpPaidPoolWithTokens();
-
-            // calling multiple consecutive times doesn't give you more tokens
-            await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
-            await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
-
-            await tokenBalanceEquals(creator, 0);
-            await tokenBalanceEquals(buyer1, 20);
-            await tokenBalanceEquals(buyer2, 0);
-
-            await transferMoreTokensToPool(18);
-            await util.methodWithGas(PresalePool.methods.transferMyTokens(), buyer1);
-
-            await tokenBalanceEquals(creator, 0);
-            await tokenBalanceEquals(buyer1, 26);
-            await tokenBalanceEquals(buyer2, 0);
-        });
-
         it("transferAllTokens()", async () => {
             await setUpPaidPoolWithTokens();
 
             // calling multiple consecutive times doesn't give you more tokens
-            await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
-            await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
+            await util.expectBalanceChanges(
+                web3,
+                [creator, buyer1, buyer2],
+                [0, 4, 1].map(x => web3.utils.toWei(x, "ether")),
+                () => {
+                        return util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
+                }
+            );
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+                return util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
+            });
 
             await tokenBalanceEquals(creator, 40);
             await tokenBalanceEquals(buyer1, 20);
             await tokenBalanceEquals(buyer2, 0);
 
             await transferMoreTokensToPool(18);
-            await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
+
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+                return util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
+            });
 
             await tokenBalanceEquals(creator, 52);
             await tokenBalanceEquals(buyer1, 26);
             await tokenBalanceEquals(buyer2, 0);
+
+            let expectedBalances = {};
+            expectedBalances[creator] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(2, "ether")
+            }
+            expectedBalances[buyer1] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(1, "ether")
+            }
+            expectedBalances[buyer2] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(0, "ether")
+            }
+            await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
         });
 
         it("transferTokensTo()", async () => {
             await setUpPaidPoolWithTokens();
 
             // calling multiple consecutive times doesn't give you more tokens
-            await util.methodWithGas(
-                PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
-                creator
+            await util.expectBalanceChanges(
+                web3,
+                [creator, buyer1, buyer2],
+                [0, 4, 1].map(x => web3.utils.toWei(x, "ether")),
+                () => {
+                    return util.methodWithGas(
+                        PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
+                        creator
+                    );
+                }
             );
-            await util.methodWithGas(
-                PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
-                creator
-            );
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+                return util.methodWithGas(
+                    PresalePool.methods.transferTokensTo([creator, buyer1, buyer2]),
+                    creator
+                );
+            });
 
             await tokenBalanceEquals(creator, 40);
             await tokenBalanceEquals(buyer1, 20);
             await tokenBalanceEquals(buyer2, 0);
 
             await transferMoreTokensToPool(18);
-            await util.methodWithGas(
-                PresalePool.methods.transferTokensTo([creator]),
-                creator
-            );
+
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+                return util.methodWithGas(
+                    PresalePool.methods.transferTokensTo([creator]),
+                    creator
+                );
+            });
 
             await tokenBalanceEquals(creator, 52);
             await tokenBalanceEquals(buyer1, 20);
             await tokenBalanceEquals(buyer2, 0);
 
+            let expectedBalances = {};
+            expectedBalances[creator] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(2, "ether")
+            }
+            expectedBalances[buyer1] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(1, "ether")
+            }
+            expectedBalances[buyer2] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(0, "ether")
+            }
+            await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
         });
 
         it("skips blacklisted sender", async () => {
@@ -421,16 +443,24 @@ describe('setToken', () => {
 
             await util.methodWithGas(
                 PresalePool.methods.transferTokensTo([
-                    blacklistedBuyer, blacklistedBuyer, buyer1, buyer2, buyer1
+                    blacklistedBuyer, blacklistedBuyer, buyer1, buyer2, buyer1, creator
                 ]),
                 creator
             );
-            await util.methodWithGas(PresalePool.methods.transferMyTokens(), creator);
 
             await tokenBalanceEquals(PresalePool.options.address, 30);
             await tokenBalanceEquals(buyer1, 30);
             await tokenBalanceEquals(buyer2, 0);
             await tokenBalanceEquals(blacklistedBuyer, 0);
+            await tokenBalanceEquals(creator, 0);
+
+            await util.methodWithGas(PresalePool.methods.transferAllTokens(), creator);
+
+            await tokenBalanceEquals(PresalePool.options.address, 30);
+            await tokenBalanceEquals(buyer1, 30);
+            await tokenBalanceEquals(buyer2, 0);
+            await tokenBalanceEquals(blacklistedBuyer, 0);
+            await tokenBalanceEquals(creator, 0);
         });
     });
 });
