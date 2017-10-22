@@ -26,6 +26,8 @@ contract PresalePool {
     uint public maxContribution;
     uint public maxPoolBalance;
 
+    uint constant public MAX_POSSIBLE_AMOUNT = 1e9 ether;
+
     address[] public participants;
 
     bool public restricted;
@@ -419,7 +421,7 @@ contract PresalePool {
                     poolContributionBalance
                 );
             }
-        } else if (toRebalance.length > 0) {
+        } else {
             for (i = 0; i < toRebalance.length; i++) {
                 participant = toRebalance[i];
                 balance = balances[participant];
@@ -508,7 +510,7 @@ contract PresalePool {
         require(
             minContribution <= maxContribution &&
             maxContribution <= maxPoolBalance &&
-            maxPoolBalance <= 1e9 ether
+            maxPoolBalance <= MAX_POSSIBLE_AMOUNT
         );
     }
 
