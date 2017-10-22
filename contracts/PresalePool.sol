@@ -316,12 +316,6 @@ contract PresalePool {
         );
     }
 
-    function transferMyTokens() external canClaimTokens {
-        uint tokenBalance = tokenContract.balanceOf(address(this));
-        transferTokensToRecipient(msg.sender, tokenBalance);
-        withdrawAllFor(msg.sender);
-    }
-
     function transferAllTokens() external canClaimTokens {
         uint tokenBalance = tokenContract.balanceOf(address(this));
 

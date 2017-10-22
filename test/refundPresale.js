@@ -304,7 +304,7 @@ describe('expectRefund', () => {
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.transferMyTokens(),
+                PresalePool.methods.transferTokensTo([creator]),
                 creator
             )
         );
@@ -347,7 +347,7 @@ describe('expectRefund', () => {
         );
 
         await util.methodWithGas(
-            PresalePool.methods.transferMyTokens(),
+            PresalePool.methods.transferTokensTo([creator]),
             creator
         );
 
