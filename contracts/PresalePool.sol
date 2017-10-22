@@ -399,14 +399,43 @@ contract PresalePool {
 
 
         uint i;
+        ParticipantState storage balance;
+        address participant;
         if (rebalanceForAll) {
             poolContributionBalance = 0;
             for (i = 0; i < participants.length; i++) {
-                rebalanceContributionState(participants[i]);
+                participant = participants[i];
+                balance = balances[participant];
+
+                balance.remaining += balance.contribution;
+                balance.contribution = 0;
+                (balance.contribution, balance.remaining) = getContribution(participant, 0);
+                poolContributionBalance += balance.contribution;
+
+                ContributionAdjusted(
+                    participant,
+                    balance.remaining,
+                    balance.contribution,
+                    poolContributionBalance
+                );
             }
         } else if (toRebalance.length > 0) {
             for (i = 0; i < toRebalance.length; i++) {
-                rebalanceContributionState(toRebalance[i]);
+                participant = toRebalance[i];
+                balance = balances[participant];
+
+                poolContributionBalance -= balance.contribution;
+                balance.remaining += balance.contribution;
+                balance.contribution = 0;
+                (balance.contribution, balance.remaining) = getContribution(participant, 0);
+                poolContributionBalance += balance.contribution;
+
+                ContributionAdjusted(
+                    participant,
+                    balance.remaining,
+                    balance.contribution,
+                    poolContributionBalance
+                );
             }
         }
     }
@@ -431,30 +460,24 @@ contract PresalePool {
     function includeInWhitelist(address participant) internal {
         ParticipantState storage balance = balances[participant];
 
-        if (!balance.whitelisted) {
-            balance.whitelisted = true;
-            IncludedInWhitelist(participant);
-
-            if (balance.remaining > 0) {
-                rebalanceContributionState(participant);
-            }
+        if (balance.whitelisted) {
+            return;
         }
-    }
 
-    function rebalanceContributionState(address participant) internal {
-        ParticipantState storage balance = balances[participant];
-        uint oldContribution = balance.contribution;
+        balance.whitelisted = true;
+        IncludedInWhitelist(participant);
+        if (balance.remaining == 0) {
+            return;
+        }
+
         (balance.contribution, balance.remaining) = getContribution(participant, 0);
         poolContributionBalance += balance.contribution;
-
-        if (oldContribution != balance.contribution) {
-            ContributionAdjusted(
-                participant,
-                balance.remaining,
-                balance.contribution,
-                poolContributionBalance
-            );
-        }
+        ContributionAdjusted(
+            participant,
+            balance.remaining,
+            balance.contribution,
+            poolContributionBalance
+        );
     }
 
     function changeState(State desiredState) internal {
@@ -482,12 +505,11 @@ contract PresalePool {
     }
 
     function validateContributionSettings() internal constant {
-        uint maxAllowed = 1e9 ether;
-        require(maxContribution <= maxAllowed);
-        require(maxPoolBalance <= maxAllowed);
-        require(minContribution <= maxAllowed);
-
-        require(minContribution <= maxContribution && maxContribution <= maxPoolBalance);
+        require(
+            minContribution <= maxContribution &&
+            maxContribution <= maxPoolBalance &&
+            maxPoolBalance <= 1e9 ether
+        );
     }
 
     function included(address participant) internal constant returns (bool) {
@@ -503,7 +525,7 @@ contract PresalePool {
         }
 
         contribution = Util.min(maxContribution, contribution);
-        contribution = Util.min(maxPoolBalance - poolContributionBalance, contribution);
+        contribution = Util.min(maxPoolBalance - poolContributionBalance + balance.contribution, contribution);
         if (contribution < minContribution) {
             return (0, total);
         }

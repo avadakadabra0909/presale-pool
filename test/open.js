@@ -36,58 +36,6 @@ describe('open state', () => {
         );
     });
 
-    it('validates contribution settings in setContributionSettings', async () => {
-        // the call below succeeds if and only if minContribution <=  maxContribution <= maxPoolTotal
-        // PresalePool.methods.setContributionSettings(minContribution, maxContribution, maxPoolTotal, [])
-        await util.expectVMException(
-            util.methodWithGas(
-                PresalePool.methods.setContributionSettings(3, 2, 5, []),
-                creator
-            )
-        );
-        // maxPoolBalance must exceed maxContribution
-        await util.expectVMException(
-            util.methodWithGas(
-                PresalePool.methods.setContributionSettings(0, 2, 1, []),
-                creator
-            )
-        );
-        // maxPoolBalance must exceed minContribution
-        await util.expectVMException(
-            util.methodWithGas(
-                PresalePool.methods.setContributionSettings(2, 2, 1, []),
-                creator
-            )
-        );
-        await util.expectVMException(
-            util.methodWithGas(
-                PresalePool.methods.setContributionSettings(3, 2, 1, []),
-                creator
-            )
-        );
-
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 2, 3, []),
-            creator
-        );
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(1, 2, 3, []),
-            creator
-        );
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 2, 2, []),
-            creator
-        );
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 0, 3, []),
-            creator
-        );
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 0, 0, []),
-            creator
-        );
-    });
-
     it('accepts deposits', async () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
@@ -397,7 +345,6 @@ describe('open state', () => {
         expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether");
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
     });
-
 
     it('can transition to failed state', async () => {
         await util.methodWithGas(
