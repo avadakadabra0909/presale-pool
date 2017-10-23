@@ -89,6 +89,10 @@ contract PresalePool {
         uint _contribution,
         uint _poolContributionBalance
     );
+    event RefundClaimed(
+        address indexed _to,
+        uint _value
+    );
     event ContributionSettingsChanged(
         uint _minContribution,
         uint _maxContribution,
@@ -310,7 +314,23 @@ contract PresalePool {
             total += balance.contribution;
             poolContributionBalance -= balance.contribution;
             balance.contribution = 0;
+
+            Withdrawl(
+                recipient,
+                total,
+                0,
+                0,
+                poolContributionBalance
+            );
         } else if (state == State.Refund) {
+            Withdrawl(
+                recipient,
+                total,
+                0,
+                balance.contribution,
+                poolContributionBalance
+            );
+
             uint share = etherRefunds.claimShare(
                 recipient,
                 this.balance - poolRemainingBalance,
@@ -318,17 +338,19 @@ contract PresalePool {
             );
             poolRemainingBalance -= total;
             total += share;
+
+            RefundClaimed(recipient, share);
         } else {
             require(state == State.Paid);
+            Withdrawl(
+                recipient,
+                total,
+                0,
+                balance.contribution,
+                poolContributionBalance
+            );
         }
 
-        Withdrawl(
-            recipient,
-            total,
-            balance.remaining,
-            balance.contribution,
-            poolContributionBalance
-        );
         require(
             recipient.call.value(total)()
         );
