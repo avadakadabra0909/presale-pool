@@ -11,7 +11,7 @@ interface ERC20 {
 interface FeeManager {
     function create(uint _feesPerEther, address[] _recipients);
     function sendFees() payable;
-    function distrbuteFees(address[] _recipients);
+    function distributeFees(address[] _recipients);
 }
 
 contract PresalePool {
@@ -25,6 +25,8 @@ contract PresalePool {
     uint public minContribution;
     uint public maxContribution;
     uint public maxPoolBalance;
+
+    uint constant public MAX_POSSIBLE_AMOUNT = 1e9 ether;
 
     address[] public participants;
 
@@ -62,6 +64,10 @@ contract PresalePool {
     event FeeInstalled(
         uint _percentage
     );
+    event FeesTransferred(
+        uint _fees
+    );
+    event FeesDistributed();
     event ExpectingRefund(
         address _senderAddress
     );
@@ -82,6 +88,10 @@ contract PresalePool {
         uint _remaining,
         uint _contribution,
         uint _poolContributionBalance
+    );
+    event RefundClaimed(
+        address indexed _to,
+        uint _value
     );
     event ContributionSettingsChanged(
         uint _minContribution,
@@ -144,7 +154,11 @@ contract PresalePool {
         validateContributionSettings();
         ContributionSettingsChanged(minContribution, maxContribution, maxPoolBalance);
 
-        restricted = _restricted;
+        if (_restricted) {
+            restricted = true;
+            WhitelistEnabled();
+        }
+
         balances[msg.sender].whitelisted = true;
 
         for (uint i = 0; i < _admins.length; i++) {
@@ -214,12 +228,14 @@ contract PresalePool {
         require(tokenDeposits.totalClaimed > 0);
         uint amount = totalFees;
         totalFees = 0;
+        FeesTransferred(amount);
         feeManager.sendFees.value(amount)();
     }
 
     function transferAndDistributeFees() external {
         transferFees();
-        feeManager.distrbuteFees(admins);
+        FeesDistributed();
+        feeManager.distributeFees(admins);
     }
 
     function setToken(address tokenAddress, bool _allowTokenClaiming) external onlyAdmins {
@@ -298,7 +314,23 @@ contract PresalePool {
             total += balance.contribution;
             poolContributionBalance -= balance.contribution;
             balance.contribution = 0;
+
+            Withdrawl(
+                recipient,
+                total,
+                0,
+                0,
+                poolContributionBalance
+            );
         } else if (state == State.Refund) {
+            Withdrawl(
+                recipient,
+                total,
+                0,
+                balance.contribution,
+                poolContributionBalance
+            );
+
             uint share = etherRefunds.claimShare(
                 recipient,
                 this.balance - poolRemainingBalance,
@@ -306,11 +338,19 @@ contract PresalePool {
             );
             poolRemainingBalance -= total;
             total += share;
+
+            RefundClaimed(recipient, share);
         } else {
             require(state == State.Paid);
+            Withdrawl(
+                recipient,
+                total,
+                0,
+                balance.contribution,
+                poolContributionBalance
+            );
         }
 
-        Withdrawl(recipient, total, 0, 0, poolContributionBalance);
         require(
             recipient.call.value(total)()
         );
@@ -382,15 +422,13 @@ contract PresalePool {
         }
     }
 
-    function setContributionSettings(uint _minContribution, uint _maxContribution, uint _maxPoolBalance) external onlyAdmins onState(State.Open) {
+    function setContributionSettings(uint _minContribution, uint _maxContribution, uint _maxPoolBalance, address[] toRebalance) external onlyAdmins onState(State.Open) {
         // we raised the minContribution threshold
-        bool recompute = (minContribution < _minContribution);
+        bool rebalanceForAll = (minContribution < _minContribution);
         // we lowered the maxContribution threshold
-        recompute = recompute || (maxContribution > _maxContribution);
-        // we did not have a maxContribution threshold and now we do
-        recompute = recompute || (maxContribution == 0 && _maxContribution > 0);
+        rebalanceForAll = rebalanceForAll || (maxContribution > _maxContribution);
         // we want to make maxPoolBalance lower than the current pool balance
-        recompute = recompute || (poolContributionBalance > _maxPoolBalance);
+        rebalanceForAll = rebalanceForAll || (poolContributionBalance > _maxPoolBalance);
 
         minContribution = _minContribution;
         maxContribution = _maxContribution;
@@ -399,23 +437,45 @@ contract PresalePool {
         validateContributionSettings();
         ContributionSettingsChanged(minContribution, maxContribution, maxPoolBalance);
 
-        if (recompute) {
+
+        uint i;
+        ParticipantState storage balance;
+        address participant;
+        if (rebalanceForAll) {
             poolContributionBalance = 0;
-            for (uint i = 0; i < participants.length; i++) {
-                address participant = participants[i];
-                ParticipantState storage balance = balances[participant];
-                uint oldContribution = balance.contribution;
+            for (i = 0; i < participants.length; i++) {
+                participant = participants[i];
+                balance = balances[participant];
+
+                balance.remaining += balance.contribution;
+                balance.contribution = 0;
                 (balance.contribution, balance.remaining) = getContribution(participant, 0);
                 poolContributionBalance += balance.contribution;
 
-                if (oldContribution != balance.contribution) {
-                    ContributionAdjusted(
-                        participant,
-                        balance.remaining,
-                        balance.contribution,
-                        poolContributionBalance
-                    );
-                }
+                ContributionAdjusted(
+                    participant,
+                    balance.remaining,
+                    balance.contribution,
+                    poolContributionBalance
+                );
+            }
+        } else {
+            for (i = 0; i < toRebalance.length; i++) {
+                participant = toRebalance[i];
+                balance = balances[participant];
+
+                uint newContribution;
+                uint newRemaining;
+                (newContribution, newRemaining) = getContribution(participant, 0);
+                poolContributionBalance = poolContributionBalance - balance.contribution + newContribution;
+                (balance.contribution, balance.remaining) = (newContribution, newRemaining);
+
+                ContributionAdjusted(
+                    participant,
+                    balance.remaining,
+                    balance.contribution,
+                    poolContributionBalance
+                );
             }
         }
     }
@@ -440,23 +500,24 @@ contract PresalePool {
     function includeInWhitelist(address participant) internal {
         ParticipantState storage balance = balances[participant];
 
-        if (!balance.whitelisted) {
-            balance.whitelisted = true;
-            IncludedInWhitelist(participant);
-
-            if (balance.remaining > 0) {
-                (balance.contribution, balance.remaining) = getContribution(participant, 0);
-                if (balance.contribution > 0) {
-                    poolContributionBalance += balance.contribution;
-                    ContributionAdjusted(
-                        participant,
-                        balance.remaining,
-                        balance.contribution,
-                        poolContributionBalance
-                    );
-                }
-            }
+        if (balance.whitelisted) {
+            return;
         }
+
+        balance.whitelisted = true;
+        IncludedInWhitelist(participant);
+        if (balance.remaining == 0) {
+            return;
+        }
+
+        (balance.contribution, balance.remaining) = getContribution(participant, 0);
+        poolContributionBalance += balance.contribution;
+        ContributionAdjusted(
+            participant,
+            balance.remaining,
+            balance.contribution,
+            poolContributionBalance
+        );
     }
 
     function changeState(State desiredState) internal {
@@ -484,13 +545,11 @@ contract PresalePool {
     }
 
     function validateContributionSettings() internal constant {
-        if (maxContribution > 0) {
-            require(maxContribution >= minContribution);
-        }
-        if (maxPoolBalance > 0) {
-            require(maxPoolBalance >= minContribution);
-            require(maxPoolBalance >= maxContribution);
-        }
+        require(
+            minContribution <= maxContribution &&
+            maxContribution <= maxPoolBalance &&
+            maxPoolBalance <= MAX_POSSIBLE_AMOUNT
+        );
     }
 
     function included(address participant) internal constant returns (bool) {
@@ -504,12 +563,9 @@ contract PresalePool {
         if (!included(participant)) {
             return (0, total);
         }
-        if (maxContribution > 0) {
-            contribution = Util.min(maxContribution, contribution);
-        }
-        if (maxPoolBalance > 0) {
-            contribution = Util.min(maxPoolBalance - poolContributionBalance, contribution);
-        }
+
+        contribution = Util.min(maxContribution, contribution);
+        contribution = Util.min(maxPoolBalance - poolContributionBalance + balance.contribution, contribution);
         if (contribution < minContribution) {
             return (0, total);
         }

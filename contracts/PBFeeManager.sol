@@ -65,7 +65,7 @@ contract PBFeeManager {
         );
     }
 
-    function distrbuteFees(address[] recipients) external {
+    function distributeFees(address[] recipients) external {
         Fees storage fees = feesForContract[msg.sender];
         require(fees.amount > 0);
 

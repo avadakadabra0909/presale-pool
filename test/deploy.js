@@ -28,18 +28,23 @@ describe('deploy', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs({ admins: admins })
+            util.createPoolArgs({
+                admins: admins,
+                minContribution: 0,
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether"),
+            })
         );
         let poolBalance = await web3.eth.getBalance(
             PresalePool.options.address
         );
 
-        await util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0), creator);
-        await util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0), admins[0]);
-        await util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0), admins[1]);
+        await util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0, []), creator);
+        await util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0, []), admins[0]);
+        await util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0, []), admins[1]);
 
         await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0), nonAdmin)
+            util.methodWithGas(PresalePool.methods.setContributionSettings(0, 0, 0, []), nonAdmin)
         );
     });
 
@@ -50,7 +55,13 @@ describe('deploy', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs({ admins: admins, restricted: true })
+            util.createPoolArgs({
+                admins: admins,
+                restricted: true,
+                minContribution: 0,
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether"),
+            })
         );
 
         await util.expectVMException(
@@ -76,7 +87,11 @@ describe('deploy', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
+            util.createPoolArgs({
+                minContribution: 0,
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether"),
+            })
         );
         let poolBalance = await web3.eth.getBalance(
             PresalePool.options.address
@@ -89,7 +104,11 @@ describe('deploy', () => {
         let PresalePool = await util.deployContract(
             web3, "PresalePool",
             creator,
-            util.createPoolArgs(),
+            util.createPoolArgs({
+                minContribution: 0,
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether"),
+            }),
             web3.utils.toWei(5, "ether")
         );
 
@@ -109,7 +128,20 @@ describe('deploy', () => {
                 creator,
                 util.createPoolArgs({
                     minContribution: 3,
-                    maxContribution: 2
+                    maxContribution: 2,
+                    maxPoolBalance: 5
+                })
+            )
+        );
+        await util.expectVMException(
+            util.deployContract(
+                web3,
+                "PresalePool",
+                creator,
+                util.createPoolArgs({
+                    minContribution: 3,
+                    maxContribution: 0,
+                    maxPoolBalance: 5
                 })
             )
         );
@@ -118,6 +150,7 @@ describe('deploy', () => {
                 web3, "PresalePool",
                 creator,
                 util.createPoolArgs({
+                    minContribution: 0,
                     maxContribution: 2,
                     maxPoolBalance: 1
                 })
@@ -129,7 +162,8 @@ describe('deploy', () => {
                 creator,
                 util.createPoolArgs({
                     minContribution: 3,
-                    maxPoolBalance: 2
+                    maxPoolBalance: 2,
+                    maxContribution: 4
                 })
             )
         );

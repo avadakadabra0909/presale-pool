@@ -66,7 +66,7 @@ describe('PBFeeManager', () => {
         }
     }
 
-    async function distrbuteFees(options) {
+    async function distributeFees(options) {
         let {
             contractAddress,
             recipients,
@@ -76,7 +76,7 @@ describe('PBFeeManager', () => {
 
         await util.expectBalanceChangeAddresses(web3, recipients, expectedPayout, ()=>{
             return util.methodWithGas(
-                FeeManager.methods.distrbuteFees(recipients),
+                FeeManager.methods.distributeFees(recipients),
                 contractAddress
             );
         });
@@ -356,7 +356,7 @@ describe('PBFeeManager', () => {
             })
         );
 
-        await distrbuteFees({
+        await distributeFees({
             recipients: recipients,
             FeeManager: FeeManager,
             contractAddress: contractAddress,
@@ -384,7 +384,7 @@ describe('PBFeeManager', () => {
             expectedTeamPayout: web3.utils.toWei(1, "ether")
         });
 
-        await distrbuteFees({
+        await distributeFees({
             recipients: recipients,
             FeeManager: FeeManager,
             contractAddress: contractAddress,
@@ -400,7 +400,7 @@ describe('PBFeeManager', () => {
             })
         );
 
-        await distrbuteFees({
+        await distributeFees({
             recipients: recipients,
             FeeManager: FeeManager,
             contractAddress: contractAddress,
@@ -495,14 +495,14 @@ describe('PBFeeManager', () => {
             expectedTeamPayout: web3.utils.toWei(5, "ether")
         });
 
-        await distrbuteFees({
+        await distributeFees({
             recipients: recipients,
             FeeManager: FeeManager,
             contractAddress: contractAddress,
             expectedPayout: web3.utils.toWei(2.5, "ether")
         });
 
-        await distrbuteFees({
+        await distributeFees({
             recipients: recipients,
             FeeManager: FeeManager,
             contractAddress: contractAddress,
@@ -530,7 +530,7 @@ describe('PBFeeManager', () => {
             expectedTeamPayout: web3.utils.toWei(1, "ether")
         });
 
-        await distrbuteFees({
+        await distributeFees({
             recipients: recipients,
             FeeManager: FeeManager,
             contractAddress: contractAddress,

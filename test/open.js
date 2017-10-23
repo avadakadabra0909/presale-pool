@@ -29,61 +29,10 @@ describe('open state', () => {
             web3,
             "PresalePool",
             creator,
-            util.createPoolArgs()
-        );
-    });
-
-    it('validates contribution settings in setContributionSettings', async () => {
-        await util.expectVMException(
-            util.methodWithGas(
-                PresalePool.methods.setContributionSettings(3, 2, 0),
-                creator
-            )
-        );
-        await util.expectVMException(
-            util.methodWithGas(
-                PresalePool.methods.setContributionSettings(0, 2, 1),
-                creator
-            )
-        );
-        await util.expectVMException(
-            util.methodWithGas(
-                PresalePool.methods.setContributionSettings(3, 0, 2),
-                creator
-            )
-        );
-
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 2, 3),
-            creator
-        );
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(1, 2, 3),
-            creator
-        );
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 2, 0),
-            creator
-        );
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 0, 3),
-            creator
-        );
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(3, 0, 0),
-            creator
-        );
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(3, 0, 3),
-            creator
-        );
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(0, 3, 3),
-            creator
-        );
-        await util.methodWithGas(
-            PresalePool.methods.setContributionSettings(3, 3, 3),
-            creator
+            util.createPoolArgs({
+                maxContribution: web3.utils.toWei(50, "ether"),
+                maxPoolBalance: web3.utils.toWei(50, "ether")
+            })
         );
     });
 
@@ -240,7 +189,10 @@ describe('open state', () => {
 
         await util.methodWithGas(
             PresalePool.methods.setContributionSettings(
-                web3.utils.toWei(2, "ether"), 0, 0
+                web3.utils.toWei(2, "ether"),
+                web3.utils.toWei(50, "ether"),
+                web3.utils.toWei(50, "ether"),
+                []
             ),
             creator
         )
@@ -293,7 +245,10 @@ describe('open state', () => {
 
         await util.methodWithGas(
             PresalePool.methods.setContributionSettings(
-                0, web3.utils.toWei(2, "ether"), 0
+                0,
+                web3.utils.toWei(2, "ether"),
+                web3.utils.toWei(50, "ether"),
+                []
             ),
             creator
         )
@@ -360,7 +315,10 @@ describe('open state', () => {
 
         await util.methodWithGas(
             PresalePool.methods.setContributionSettings(
-                0, 0, web3.utils.toWei(2, "ether")
+                0,
+                web3.utils.toWei(2, "ether"),
+                web3.utils.toWei(2, "ether"),
+                []
             ),
             creator
         )
@@ -387,7 +345,6 @@ describe('open state', () => {
         expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether");
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
     });
-
 
     it('can transition to failed state', async () => {
         await util.methodWithGas(
