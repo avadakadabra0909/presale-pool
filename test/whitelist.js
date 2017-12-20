@@ -10,6 +10,8 @@ describe('whitelist', () => {
     let buyer1;
     let buyer2;
     let web3;
+    let PBFeeManager;
+
     before(async () => {
         let result = await server.setUp();
         web3 = result.web3;
@@ -17,6 +19,17 @@ describe('whitelist', () => {
         buyer1 = result.addresses[1].toLowerCase();
         buyer2 = result.addresses[2].toLowerCase();
         buyer3 = result.addresses[3].toLowerCase();
+        let feeTeamMember = result.addresses[result.addresses.length-1].toLowerCase();
+        PBFeeManager = await util.deployContract(
+            web3,
+            "PBFeeManager",
+            creator,
+            [
+                [feeTeamMember],
+                web3.utils.toWei(0.005, "ether"),
+                web3.utils.toWei(0.01, "ether")
+            ]
+        );
     });
 
     after(async () => {
@@ -30,6 +43,7 @@ describe('whitelist', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
+                feeManager: PBFeeManager.options.address,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether")
             })
@@ -338,12 +352,12 @@ describe('whitelist', () => {
             PresalePool.methods.deposit(),
             buyer1,
             web3.utils.toWei(5, "ether")
-        )
+        );
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer2,
             web3.utils.toWei(3, "ether")
-        )
+        );
 
         let expectedBalances = {}
         expectedBalances[buyer1] = {
@@ -395,7 +409,7 @@ describe('whitelist', () => {
             PresalePool.methods.deposit(),
             buyer2,
             web3.utils.toWei(2, "ether")
-        )
+        );
         expectedBalances[buyer2].contribution = web3.utils.toWei(5, "ether")
         expectedBalances[buyer2].remaining = web3.utils.toWei(0, "ether")
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(10, "ether"));

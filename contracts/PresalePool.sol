@@ -9,9 +9,10 @@ interface ERC20 {
 }
 
 interface FeeManager {
-    function create(uint _feesPerEther, address[] _recipients);
-    function sendFees() payable;
-    function distributeFees(address[] _recipients);
+    function create(uint recipientFeesPerEther, address recipient) returns(uint);
+    function discountFees(uint recipientFeesPerEther, uint teamFeesPerEther);
+    function sendFees() payable returns(uint);
+    function distributeFees(address contractAddress);
 }
 
 contract PresalePool {
@@ -27,6 +28,9 @@ contract PresalePool {
     uint public maxPoolBalance;
 
     uint constant public MAX_POSSIBLE_AMOUNT = 1e9 ether;
+    uint constant public MAX_POSSIBLE_TOKEN_DROPS = 10;
+    uint constant public MAX_GAS_PRICE = 60e9;
+    uint constant public AUTO_DISTRIBUTE_GAS = 150000;
 
     address[] public participants;
 
@@ -41,28 +45,43 @@ contract PresalePool {
     mapping (address => ParticipantState) public balances;
     uint public poolContributionBalance;
     uint public poolRemainingBalance;
+    uint public totalContributors;
 
     address public presaleAddress;
 
     address public refundSenderAddress;
-    QuotaTracker.Data etherRefunds;
-    bool public allowTokenClaiming;
-    QuotaTracker.Data tokenDeposits;
+    QuotaTracker.Data public extraEtherDeposits;
+    mapping (address => QuotaTracker.Data) public tokenDeposits;
 
-    ERC20 public tokenContract;
+    address public expectedTokenAddress;
 
     FeeManager public feeManager;
     uint public totalFees;
     uint public feesPerEther;
 
+    uint public totalTokenDrops;
+    address public autoDistributeGasRecipient;
+
     event Deposit(
-        address indexed _from,
+        address _from,
         uint _value,
         uint _contributionTotal,
         uint _poolContributionBalance
     );
+    event AutoDistributionConfigured(
+        uint _autoDistributeGasPrice,
+        uint _totalTokenDrops,
+        address _autoDistributeGasRecipient
+    );
+    event TransactionForwarded(
+        address _destination,
+        uint _gasLimit,
+        bytes _data
+    );
     event FeeInstalled(
-        uint _percentage
+        uint _totalPercentage,
+        uint _creatorPercentage,
+        address _feeManager
     );
     event FeesTransferred(
         uint _fees
@@ -71,26 +90,45 @@ contract PresalePool {
     event ExpectingRefund(
         address _senderAddress
     );
-    event TokenAddressSet(
+    event EtherAirdropRecieved(
+        address _senderAddress,
+        uint _value,
+        uint _gasPrice
+    );
+    event AutoDistributeTokenAirdrop(
+        address _senderAddress,
         address _tokenAddress,
-        bool _allowTokenClaiming,
+        uint _gasPrice
+    );
+    event RefundRecieved(
+        uint _value
+    );
+    event ERC223TokensReceived(
+        address _tokenAddress,
+        address _senderAddress,
+        uint _amount,
+        bytes _data
+    );
+    event TokensConfirmed(
+        address _tokenAddress,
         uint _poolTokenBalance
     );
     event TokenTransfer(
-        address indexed _to,
+        address _tokenAddress,
+        address _to,
         uint _value,
         bool _succeeded,
         uint _poolTokenBalance
     );
     event Withdrawl(
-        address indexed _to,
+        address _to,
         uint _value,
         uint _remaining,
         uint _contribution,
         uint _poolContributionBalance
     );
     event RefundClaimed(
-        address indexed _to,
+        address _to,
         uint _value
     );
     event ContributionSettingsChanged(
@@ -99,7 +137,7 @@ contract PresalePool {
         uint _maxPoolBalance
     );
     event ContributionAdjusted(
-        address indexed _participant,
+        address _participant,
         uint _remaining,
         uint _contribution,
         uint _poolContributionBalance
@@ -107,10 +145,10 @@ contract PresalePool {
     event WhitelistEnabled();
     event WhitelistDisabled();
     event IncludedInWhitelist(
-        address indexed _participant
+        address _participant
     );
     event RemovedFromWhitelist(
-        address indexed _participant
+        address _participant
     );
     event StateChange(
         State _from,
@@ -131,28 +169,50 @@ contract PresalePool {
     }
 
     modifier canClaimTokens() {
-        require(state == State.Paid && allowTokenClaiming);
+        require(state == State.Paid && expectedTokenAddress != address(0));
         _;
     }
 
     function PresalePool(
         address _feeManager,
-        uint _feesPerEther,
+        uint _creatorFeesPerEther,
         uint _minContribution,
         uint _maxContribution,
         uint _maxPoolBalance,
         address[] _admins,
-        bool _restricted
+        bool _restricted,
+        uint _totalTokenDrops,
+        address _autoDistributeGasRecipient
     ) payable
     {
         AddAdmin(msg.sender);
         admins.push(msg.sender);
 
+        feeManager = FeeManager(_feeManager);
+        feesPerEther = feeManager.create(_creatorFeesPerEther, msg.sender);
+        FeeInstalled(
+            feesPerEther,
+            _creatorFeesPerEther,
+            _feeManager
+        );
+
+        AutoDistributionConfigured(
+            MAX_GAS_PRICE,
+            _totalTokenDrops,
+            _autoDistributeGasRecipient
+        );
+        totalTokenDrops = _totalTokenDrops;
+        autoDistributeGasRecipient = _autoDistributeGasRecipient;
+
+        ContributionSettingsChanged(
+            _minContribution,
+            _maxContribution,
+            _maxPoolBalance
+        );
         minContribution = _minContribution;
         maxContribution = _maxContribution;
         maxPoolBalance = _maxPoolBalance;
-        validateContributionSettings();
-        ContributionSettingsChanged(minContribution, maxContribution, maxPoolBalance);
+        validatePoolSettings();
 
         if (_restricted) {
             restricted = true;
@@ -163,94 +223,14 @@ contract PresalePool {
 
         for (uint i = 0; i < _admins.length; i++) {
             address admin = _admins[i];
-            if (!Util.contains(admins, admin)) {
-                AddAdmin(admin);
-                admins.push(admin);
-                balances[admin].whitelisted = true;
-            }
-        }
-
-        feesPerEther = _feesPerEther;
-        FeeInstalled(feesPerEther);
-        if (feesPerEther > 0) {
-            feeManager = FeeManager(_feeManager);
-            // 50 % fee is excessive
-            require(feesPerEther * 2 < 1 ether);
-            feeManager.create(feesPerEther, admins);
+            AddAdmin(admin);
+            admins.push(admin);
+            balances[admin].whitelisted = true;
         }
 
         if (msg.value > 0) {
             deposit();
         }
-    }
-
-    function () public payable onState(State.Refund) {
-        require(msg.sender == refundSenderAddress);
-    }
-
-    function tokenFallback(address _from, uint _value, bytes _data) external onState(State.Paid) {
-    }
-
-    function version() public pure returns (uint, uint, uint) {
-        return (1, 1, 0);
-    }
-
-    function fail() external onlyAdmins onState(State.Open) {
-        changeState(State.Failed);
-    }
-
-    function payToPresale(address _presaleAddress, uint minPoolBalance) external onlyAdmins onState(State.Open) {
-        require(poolContributionBalance >= minPoolBalance);
-        changeState(State.Paid);
-        assert(this.balance >= poolContributionBalance);
-
-        if (feesPerEther > 0) {
-            totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
-        }
-        poolRemainingBalance = this.balance - poolContributionBalance;
-
-        require(
-            _presaleAddress.call.value(poolContributionBalance - totalFees)()
-        );
-    }
-
-    function expectRefund(address sender) payable external onlyAdmins {
-        require(state == State.Paid || state == State.Refund);
-        require(tokenDeposits.totalClaimed == 0);
-        if (sender != refundSenderAddress) {
-            refundSenderAddress = sender;
-            ExpectingRefund(sender);
-        }
-        if (state == State.Paid) {
-            changeState(State.Refund);
-        }
-    }
-
-    function transferFees() public onState(State.Paid) {
-        require(totalFees > 0);
-        require(tokenDeposits.totalClaimed > 0);
-        uint amount = totalFees;
-        totalFees = 0;
-        FeesTransferred(amount);
-        feeManager.sendFees.value(amount)();
-    }
-
-    function transferAndDistributeFees() external {
-        transferFees();
-        FeesDistributed();
-        feeManager.distributeFees(admins);
-    }
-
-    function setToken(address tokenAddress, bool _allowTokenClaiming) external onlyAdmins {
-        require(state == State.Paid || state == State.Open);
-        require(tokenDeposits.totalClaimed == 0);
-        allowTokenClaiming = _allowTokenClaiming;
-        tokenContract = ERC20(tokenAddress);
-        TokenAddressSet(
-            tokenAddress,
-            allowTokenClaiming,
-            tokenContract.balanceOf(address(this))
-        );
     }
 
     function deposit() payable public onState(State.Open) {
@@ -264,6 +244,10 @@ contract PresalePool {
         require(newRemaining == 0);
 
         ParticipantState storage balance = balances[msg.sender];
+        if (balance.contribution == 0) {
+            totalContributors++;
+        }
+
         poolContributionBalance = poolContributionBalance - balance.contribution + newContribution;
         (balance.contribution, balance.remaining) = (newContribution, newRemaining);
 
@@ -275,8 +259,174 @@ contract PresalePool {
         Deposit(msg.sender, msg.value, balance.contribution, poolContributionBalance);
     }
 
+    function () external payable onState(State.Refund) {
+        require(msg.sender == refundSenderAddress);
+        RefundRecieved(msg.value);
+    }
+
+    function airdropEther(uint gasPrice) external payable canClaimTokens {
+        uint gasCosts = autoDistributionFees(gasPrice, totalContributors, 1);
+        EtherAirdropRecieved(msg.sender, msg.value - gasCosts, gasPrice);
+        if (gasPrice > 0) {
+            require(msg.value > gasCosts);
+            transferAutoDistributionFees(gasCosts);
+        } else {
+            require(msg.value > 0);
+        }
+    }
+
+    function airdropTokens(address tokenAddress, uint gasPrice) external payable canClaimTokens {
+        uint gasCosts = autoDistributionFees(gasPrice, totalContributors, 1);
+        require(msg.value >= gasCosts && msg.value <= 2*gasCosts);
+        AutoDistributeTokenAirdrop(msg.sender, tokenAddress, gasPrice);
+        transferAutoDistributionFees(msg.value);
+    }
+
+    function tokenFallback(address _from, uint _value, bytes _data) external onState(State.Paid) {
+        ERC223TokensReceived(
+            msg.sender,
+            _from,
+            _value,
+            _data
+        );
+    }
+
+    function version() external pure returns (uint, uint, uint) {
+        return (2, 0, 0);
+    }
+
+    function fail() external onlyAdmins onState(State.Open) {
+        changeState(State.Failed);
+        poolRemainingBalance = this.balance - poolContributionBalance;
+        if (totalTokenDrops > 0) {
+            uint gasCosts = autoDistributionFees(MAX_GAS_PRICE, totalContributors, 1);
+            transferAutoDistributionFees(gasCosts);
+        }
+    }
+
+    function discountFees(uint recipientFeesPerEther, uint teamFeesPerEther) external onState(State.Open) {
+        require(msg.sender == tx.origin);
+        require(feesPerEther >= (recipientFeesPerEther + teamFeesPerEther));
+        feesPerEther = recipientFeesPerEther + teamFeesPerEther;
+        feeManager.discountFees(recipientFeesPerEther, teamFeesPerEther);
+    }
+
+    function payToPresale(address _presaleAddress, uint minPoolBalance, uint gasLimit, bytes data) external onlyAdmins onState(State.Open) {
+        require(poolContributionBalance >= minPoolBalance);
+        require(poolContributionBalance > 0);
+        changeState(State.Paid);
+        assert(this.balance >= poolContributionBalance);
+
+        totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
+        poolRemainingBalance = this.balance - poolContributionBalance;
+
+        uint gasCosts = autoDistributionFees(MAX_GAS_PRICE, totalContributors, totalTokenDrops);
+        transferAutoDistributionFees(gasCosts);
+        require(
+            _presaleAddress.call.gas(
+                (gasLimit > 0) ? gasLimit : msg.gas
+            ).value(
+                poolContributionBalance - totalFees - gasCosts
+            )(data)
+        );
+    }
+
+    function forwardTransaction(address destination, uint gasLimit, bytes data) payable external onlyAdmins {
+        require(state != State.Failed);
+        TransactionForwarded(destination, gasLimit, data);
+        require(
+            destination.call.gas(
+                (gasLimit > 0) ? gasLimit : msg.gas
+            ).value(
+                msg.value
+            )(data)
+        );
+    }
+
+    function expectRefund(address sender) external onlyAdmins {
+        require(state == State.Paid || state == State.Refund);
+        require(expectedTokenAddress == address(0));
+        totalFees = 0;
+        if (sender != refundSenderAddress) {
+            refundSenderAddress = sender;
+            ExpectingRefund(sender);
+        }
+        if (state == State.Paid) {
+            changeState(State.Refund);
+        }
+    }
+
+    function transferFees() public canClaimTokens returns(uint) {
+        require(totalFees > 0);
+        uint amount = totalFees;
+        totalFees = 0;
+        FeesTransferred(amount);
+        return feeManager.sendFees.value(amount)();
+    }
+
+    function transferAndDistributeFees() public {
+        uint creatorFees = transferFees();
+        if (creatorFees > 0) {
+            FeesDistributed();
+            feeManager.distributeFees(this);
+        }
+    }
+
+    function confirmTokens(address tokenAddress, bool claimFees) external onlyAdmins onState(State.Paid) {
+        require(expectedTokenAddress == address(0));
+        expectedTokenAddress = tokenAddress;
+        ERC20 tokenContract = ERC20(tokenAddress);
+        require(tokenContract.balanceOf(address(this)) > 0);
+        TokensConfirmed(
+            tokenAddress,
+            tokenContract.balanceOf(address(this))
+        );
+
+        if (claimFees) {
+            transferAndDistributeFees();
+        }
+    }
+
     function withdrawAll() external {
-        withdrawAllFor(msg.sender);
+        if (state == State.Open) {
+            ParticipantState storage balance = balances[msg.sender];
+            uint total = balance.remaining;
+            if (total + balance.contribution == 0) {
+                return;
+            }
+            if (balance.contribution > 0) {
+                totalContributors--;
+                total += balance.contribution;
+            }
+
+            poolContributionBalance -= balance.contribution;
+            balance.contribution = 0;
+
+            Withdrawl(
+                msg.sender,
+                total,
+                0,
+                0,
+                poolContributionBalance
+            );
+
+            balance.remaining = 0;
+            require(
+                msg.sender.call.value(total)()
+            );
+        } else if (state == State.Refund || state == State.Failed || state == State.Paid) {
+            withdrawRemainingAndSurplus(msg.sender);
+        }
+    }
+
+    function withdrawAllForMany(address[] recipients) external {
+        require(
+            state == State.Refund || state == State.Failed || state == State.Paid
+        );
+
+        for (uint i = 0; i < recipients.length; i++) {
+            withdrawRemainingAndSurplus(recipients[i]);
+        }
     }
 
     function withdraw(uint amount) external onState(State.Open) {
@@ -289,7 +439,12 @@ contract PresalePool {
         if (debit > 0) {
             balance.contribution -= debit;
             poolContributionBalance -= debit;
-            require(balance.contribution >= minContribution);
+            require(
+                balance.contribution >= minContribution || balance.contribution == 0
+            );
+            if (balance.contribution == 0) {
+                totalContributors--;
+            }
         }
 
         Withdrawl(
@@ -304,80 +459,25 @@ contract PresalePool {
         );
     }
 
-    function withdrawAllFor(address recipient) internal {
-        ParticipantState storage balance = balances[recipient];
-        if (balance.remaining + balance.contribution == 0) {
-            return;
-        }
-
-        uint total = balance.remaining;
-        balance.remaining = 0;
-
-        if (state == State.Open || state == State.Failed) {
-            total += balance.contribution;
-            poolContributionBalance -= balance.contribution;
-            balance.contribution = 0;
-
-            Withdrawl(
-                recipient,
-                total,
-                0,
-                0,
-                poolContributionBalance
-            );
-        } else if (state == State.Refund) {
-            Withdrawl(
-                recipient,
-                total,
-                0,
-                balance.contribution,
-                poolContributionBalance
-            );
-
-            uint share = etherRefunds.claimShare(
-                recipient,
-                this.balance - poolRemainingBalance,
-                [balance.contribution, poolContributionBalance]
-            );
-            poolRemainingBalance -= total;
-            total += share;
-
-            RefundClaimed(recipient, share);
-        } else {
-            require(state == State.Paid);
-            Withdrawl(
-                recipient,
-                total,
-                0,
-                balance.contribution,
-                poolContributionBalance
-            );
-        }
-
-        require(
-            recipient.call.value(total)()
-        );
-    }
-
-    function transferAllTokens() external canClaimTokens {
-        uint tokenBalance = tokenContract.balanceOf(address(this));
+    function transferAllTokens(address tokenAddress) external canClaimTokens {
+        uint tokenBalance = ERC20(tokenAddress).balanceOf(address(this));
 
         for (uint i = 0; i < participants.length; i++) {
             if (tokenBalance > 0) {
-                tokenBalance = transferTokensToRecipient(participants[i], tokenBalance);
+                tokenBalance = transferTokensToRecipient(tokenAddress, participants[i], tokenBalance);
             }
-            withdrawAllFor(participants[i]);
+            withdrawRemaining(participants[i]);
         }
     }
 
-    function transferTokensTo(address[] recipients) external canClaimTokens {
-        uint tokenBalance = tokenContract.balanceOf(address(this));
+    function transferTokensTo(address tokenAddress, address[] recipients) external canClaimTokens {
+        uint tokenBalance = ERC20(tokenAddress).balanceOf(address(this));
 
         for (uint i = 0; i < recipients.length; i++) {
             if (tokenBalance > 0) {
-                tokenBalance = transferTokensToRecipient(recipients[i], tokenBalance);
+                tokenBalance = transferTokensToRecipient(tokenAddress, recipients[i], tokenBalance);
             }
-            withdrawAllFor(recipients[i]);
+            withdrawRemaining(recipients[i]);
         }
     }
 
@@ -397,6 +497,7 @@ contract PresalePool {
                 RemovedFromWhitelist(participant);
 
                 if (balance.contribution > 0) {
+                    totalContributors--;
                     poolContributionBalance -= balance.contribution;
                     balance.remaining += balance.contribution;
                     balance.contribution = 0;
@@ -425,6 +526,16 @@ contract PresalePool {
         }
     }
 
+    function setTokenDrops(uint _totalTokenDrops) external onlyAdmins onState(State.Open) {
+        totalTokenDrops = _totalTokenDrops;
+        validatePoolSettings();
+        AutoDistributionConfigured(
+            MAX_GAS_PRICE,
+            totalTokenDrops,
+            autoDistributeGasRecipient
+        );
+    }
+
     function setContributionSettings(uint _minContribution, uint _maxContribution, uint _maxPoolBalance, address[] toRebalance) external onlyAdmins onState(State.Open) {
         // we raised the minContribution threshold
         bool rebalanceForAll = (minContribution < _minContribution);
@@ -437,7 +548,7 @@ contract PresalePool {
         maxContribution = _maxContribution;
         maxPoolBalance = _maxPoolBalance;
 
-        validateContributionSettings();
+        validatePoolSettings();
         ContributionSettingsChanged(minContribution, maxContribution, maxPoolBalance);
 
 
@@ -446,6 +557,7 @@ contract PresalePool {
         address participant;
         if (rebalanceForAll) {
             poolContributionBalance = 0;
+            totalContributors = 0;
             for (i = 0; i < participants.length; i++) {
                 participant = participants[i];
                 balance = balances[participant];
@@ -453,7 +565,10 @@ contract PresalePool {
                 balance.remaining += balance.contribution;
                 balance.contribution = 0;
                 (balance.contribution, balance.remaining) = getContribution(participant, 0);
-                poolContributionBalance += balance.contribution;
+                if (balance.contribution > 0) {
+                    poolContributionBalance += balance.contribution;
+                    totalContributors++;
+                }
 
                 ContributionAdjusted(
                     participant,
@@ -471,6 +586,11 @@ contract PresalePool {
                 uint newRemaining;
                 (newContribution, newRemaining) = getContribution(participant, 0);
                 poolContributionBalance = poolContributionBalance - balance.contribution + newContribution;
+                if (newContribution > 0 && balance.contribution == 0) {
+                    totalContributors++;
+                } else if (newContribution == 0 && balance.contribution > 0) {
+                    totalContributors--;
+                }
                 (balance.contribution, balance.remaining) = (newContribution, newRemaining);
 
                 ContributionAdjusted(
@@ -514,13 +634,16 @@ contract PresalePool {
         }
 
         (balance.contribution, balance.remaining) = getContribution(participant, 0);
-        poolContributionBalance += balance.contribution;
-        ContributionAdjusted(
-            participant,
-            balance.remaining,
-            balance.contribution,
-            poolContributionBalance
-        );
+        if (balance.contribution > 0) {
+            totalContributors++;
+            poolContributionBalance += balance.contribution;
+            ContributionAdjusted(
+                participant,
+                balance.remaining,
+                balance.contribution,
+                poolContributionBalance
+            );
+        }
     }
 
     function changeState(State desiredState) internal {
@@ -528,31 +651,104 @@ contract PresalePool {
         state = desiredState;
     }
 
-    function transferTokensToRecipient(address recipient, uint tokenBalance) internal returns(uint) {
+    function withdrawRemainingAndSurplus(address recipient) internal {
         ParticipantState storage balance = balances[recipient];
-        uint share = tokenDeposits.claimShare(
+        uint total = balance.remaining;
+
+        uint share = extraEtherDeposits.claimShare(
+            recipient,
+            this.balance - totalFees - poolRemainingBalance,
+            [balance.contribution, poolContributionBalance]
+        );
+        if (share == 0 && total == 0) {
+            return;
+        }
+
+        Withdrawl(
+            recipient,
+            total,
+            0,
+            balance.contribution,
+            poolContributionBalance
+        );
+
+        poolRemainingBalance -= total;
+        total += share;
+        RefundClaimed(recipient, share);
+
+
+        balance.remaining = 0;
+        require(
+            recipient.call.value(total)()
+        );
+    }
+
+    function withdrawRemaining(address recipient) internal {
+        if (poolRemainingBalance == 0) {
+            return;
+        }
+
+        ParticipantState storage balance = balances[recipient];
+        uint total = balance.remaining;
+
+        if (total == 0) {
+            return;
+        }
+
+        Withdrawl(
+            recipient,
+            total,
+            0,
+            balance.contribution,
+            poolContributionBalance
+        );
+
+        poolRemainingBalance -= total;
+        balance.remaining = 0;
+        require(
+            recipient.call.value(total)()
+        );
+    }
+
+    function transferTokensToRecipient(address tokenAddress, address recipient, uint tokenBalance) internal returns(uint) {
+        ParticipantState storage balance = balances[recipient];
+        uint share = tokenDeposits[tokenAddress].claimShare(
             recipient,
             tokenBalance,
             [balance.contribution, poolContributionBalance]
         );
 
         tokenBalance -= share;
-        bool succeeded = tokenContract.transfer(recipient, share);
+        bool succeeded = ERC20(tokenAddress).transfer(recipient, share);
         if (!succeeded) {
-            tokenDeposits.undoClaim(recipient, share);
+            tokenDeposits[tokenAddress].undoClaim(recipient, share);
             tokenBalance += share;
         }
 
-        TokenTransfer(recipient, share, succeeded, tokenBalance);
+        TokenTransfer(tokenAddress, recipient, share, succeeded, tokenBalance);
         return tokenBalance;
     }
 
-    function validateContributionSettings() internal constant {
+    function transferAutoDistributionFees(uint gasCosts) internal {
+        if (gasCosts > 0) {
+            autoDistributeGasRecipient.transfer(gasCosts);
+        }
+    }
+
+    function autoDistributionFees(uint gasPrice, uint numContributors, uint transfersPerContributor) internal returns(uint) {
+        return gasPrice * numContributors * transfersPerContributor * AUTO_DISTRIBUTE_GAS;
+    }
+
+    function validatePoolSettings() internal constant {
         require(
+            totalTokenDrops <= MAX_POSSIBLE_TOKEN_DROPS &&
             minContribution <= maxContribution &&
             maxContribution <= maxPoolBalance &&
             maxPoolBalance <= MAX_POSSIBLE_AMOUNT
         );
+
+        uint gasCosts = autoDistributionFees(MAX_GAS_PRICE, 1, totalTokenDrops);
+        require(minContribution >= 2 * gasCosts);
     }
 
     function included(address participant) internal constant returns (bool) {
