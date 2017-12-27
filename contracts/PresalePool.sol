@@ -188,8 +188,11 @@ contract PresalePool {
         require(msg.sender == refundSenderAddress);
     }
 
+    function tokenFallback(address _from, uint _value, bytes _data) external onState(State.Paid) {
+    }
+
     function version() public pure returns (uint, uint, uint) {
-        return (1, 0, 0);
+        return (1, 1, 0);
     }
 
     function fail() external onlyAdmins onState(State.Open) {

@@ -48,11 +48,44 @@ describe('setToken', () => {
         );
     });
 
+    it("tokenFallback() cant be called in failed state", async () => {
+        await util.methodWithGas(PresalePool.methods.fail(), creator);
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.tokenFallback(creator, 1, '0x'),
+                creator
+            )
+        );
+    });
+
     it("setToken() cant be called in failed state", async () => {
         await util.methodWithGas(PresalePool.methods.fail(), creator);
         await util.expectVMException(
             util.methodWithGas(
                 PresalePool.methods.setToken(TestToken.options.address, true),
+                creator
+            )
+        );
+    });
+
+    it("tokenFallback() cant be called in refunded state", async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            creator,
+            web3.utils.toWei(2, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.payToPresale(creator, 0),
+            creator
+        );
+        await util.methodWithGas(
+            PresalePool.methods.expectRefund(creator),
+            creator
+        );
+
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.tokenFallback(creator, 1, '0x'),
                 creator
             )
         );
@@ -80,9 +113,35 @@ describe('setToken', () => {
         );
     });
 
+    it("tokenFallback() cant be called in open state", async () => {
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.tokenFallback(creator, 1, '0x'),
+                creator
+            )
+        );
+    });
+
     it("setToken() can be called in open state", async () => {
         await util.methodWithGas(
             PresalePool.methods.setToken(TestToken.options.address, true),
+            creator
+        );
+    });
+
+    it("tokenFallback() can be called in paid state", async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            creator,
+            web3.utils.toWei(2, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.payToPresale(creator, 0),
+            creator
+        );
+
+        await util.methodWithGas(
+            PresalePool.methods.tokenFallback(creator, 1, '0x'),
             creator
         );
     });
