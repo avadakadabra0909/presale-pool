@@ -14,22 +14,21 @@ contract PBFeeManager {
     using QuotaTracker for QuotaTracker.Data;
 
     struct Fees {
+        mapping (address => bool) claimed;
+        mapping (address => bool) isRecipient;
         uint[2] recipientFraction;
-        address recipient;
+        uint numRecipients;
         uint amount;
-        bool claimed;
+        bool exists;
     }
     mapping (address => Fees) public feesForContract;
     uint public outstandingFeesBalance;
 
     address[] public teamMembers;
-    QuotaTracker.Data public teamBalances;
+    QuotaTracker.Data teamBalances;
     mapping(address => QuotaTracker.Data) public teamTokenBalances;
 
-    uint public minTeamFee;
-    uint public maxTeamFee;
-
-    function PBFeeManager(address[] _teamMembers, uint _minTeamFee, uint _maxTeamFee) payable {
+    function PBFeeManager(address[] _teamMembers) payable {
         require(_teamMembers.length > 0);
         for (uint i = 0; i < _teamMembers.length; i++) {
             address addr = _teamMembers[i];
@@ -37,41 +36,50 @@ contract PBFeeManager {
                 teamMembers.push(addr);
             }
         }
-        require(_minTeamFee <= _maxTeamFee && _maxTeamFee <= 1 ether);
-        minTeamFee = _minTeamFee;
-        maxTeamFee = _maxTeamFee;
     }
 
     function () public payable {}
 
-    function sendFees() external payable returns(uint) {
+    function sendFees() external payable {
         require(msg.value > 0);
         Fees storage fees = feesForContract[msg.sender];
-        // require that fees haven't already been collected
+        require(fees.exists);
         require(fees.amount == 0);
-        // require that fees is initialized
-        require(fees.recipientFraction[1] > 0);
-
         fees.amount = msg.value;
 
         uint recipientShare = fees.recipientFraction.shareOf(fees.amount);
-        outstandingFeesBalance += recipientShare;
-        return recipientShare;
+        outstandingFeesBalance += fees.numRecipients * recipientShare;
     }
 
-    function distributeFees(address contractAddress) external {
+    function claimMyFees(address contractAddress) external {
         Fees storage fees = feesForContract[contractAddress];
         require(fees.amount > 0);
-        require(!fees.claimed);
+        require(fees.isRecipient[msg.sender] && !fees.claimed[msg.sender]);
 
-        fees.claimed = true;
         uint share = fees.recipientFraction.shareOf(fees.amount);
-        if (share > 0) {
-            outstandingFeesBalance -= share;
+        fees.claimed[msg.sender] = true;
+        outstandingFeesBalance -= share;
 
-            require(
-                fees.recipient.call.value(share)()
-            );
+        require(
+            msg.sender.call.value(share)()
+        );
+    }
+
+    function distributeFees(address[] recipients) external {
+        Fees storage fees = feesForContract[msg.sender];
+        require(fees.amount > 0);
+
+        uint share = fees.recipientFraction.shareOf(fees.amount);
+
+        for (uint i = 0; i < recipients.length; i++) {
+            address recipient = recipients[i];
+            if (!fees.claimed[recipient]) {
+                fees.claimed[recipient] = true;
+                outstandingFeesBalance -= share;
+                require(
+                    recipient.call.value(share)()
+                );
+            }
         }
     }
 
@@ -110,61 +118,45 @@ contract PBFeeManager {
         require(calledByTeamMember);
     }
 
-    function create(uint recipientFeesPerEther, address recipient) external returns(uint) {
+    function create(uint feesPerEther, address[] recipients) external {
+        require(feesPerEther > 0);
         // 50 % fee is excessive
-        require(recipientFeesPerEther * 2 < 0.99 ether);
+        require(feesPerEther * 2 < 1 ether);
+        require(recipients.length > 0 && recipients.length < 5);
 
         Fees storage fees = feesForContract[msg.sender];
-        // require that fees is uninitialized
-        require(fees.recipientFraction[1] == 0);
+        require(!fees.exists);
 
-        // PrimaBlock team will get at most maxTeamFee per ether
-        // and at least minTeamFee per ether
-        uint teamFeesPerEther = Util.max(
-            Util.min(
-                recipientFeesPerEther / 2,
-                maxTeamFee
-            ),
-            minTeamFee
+        fees.exists = true;
+
+        // PrimaBlock team will get at most 1%
+        uint teamFeesPerEther = Util.min(
+            feesPerEther / 2,
+            1 ether / 100
         );
 
-        fees.recipient = recipient;
         fees.recipientFraction = [
-            // numerator
-            recipientFeesPerEther,
-            // denominator
-            recipientFeesPerEther + teamFeesPerEther
+            (feesPerEther - teamFeesPerEther) / recipients.length, // numerator
+            feesPerEther // denominator
         ];
+        fees.numRecipients = recipients.length;
 
-        return recipientFeesPerEther + teamFeesPerEther;
-    }
-
-    function discountFees(uint recipientFeesPerEther, uint teamFeesPerEther) external {
-        require(Util.contains(teamMembers, tx.origin));
-        Fees storage fees = feesForContract[msg.sender];
-        // require that fees haven't already been collected
-        require(fees.amount == 0);
-        // require that fees is initialized
-        require(fees.recipientFraction[1] > 0);
-
-        require((recipientFeesPerEther + teamFeesPerEther) <= fees.recipientFraction[1]);
-
-        fees.recipientFraction = [
-            // numerator
-            recipientFeesPerEther,
-            // denominator
-            recipientFeesPerEther + teamFeesPerEther
-        ];
+        for (uint i = 0; i < recipients.length; i++) {
+            address recipient = recipients[i];
+            require(!fees.isRecipient[recipient]);
+            fees.isRecipient[recipient] = true;
+        }
     }
 
     // used only for tests
-    function getFees(address contractAddress) public constant returns(uint, uint, address, uint) {
+    function getFees(address contractAddress) public constant returns(uint, uint, uint, uint, bool) {
         Fees storage fees = feesForContract[contractAddress];
         return (
             fees.recipientFraction[0],
             fees.recipientFraction[1],
-            fees.recipient,
-            fees.amount
+            fees.numRecipients,
+            fees.amount,
+            fees.exists
         );
     }
 

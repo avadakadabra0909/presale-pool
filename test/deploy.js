@@ -9,24 +9,12 @@ describe('deploy', () => {
     let creator;
     let addresses;
     let web3;
-    let PBFeeManager;
 
     before(async () => {
         let result = await server.setUp();
         web3 = result.web3;
         creator = result.addresses[0].toLowerCase();
         addresses = result.addresses;
-        let feeTeamMember = addresses[addresses.length-1].toLowerCase();
-        PBFeeManager = await util.deployContract(
-            web3,
-            "PBFeeManager",
-            creator,
-            [
-                [feeTeamMember],
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
-            ]
-        );
     });
 
     after(async () => {
@@ -41,7 +29,6 @@ describe('deploy', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                feeManager: PBFeeManager.options.address,
                 admins: admins,
                 minContribution: 0,
                 maxContribution: web3.utils.toWei(50, "ether"),
@@ -69,7 +56,6 @@ describe('deploy', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                feeManager: PBFeeManager.options.address,
                 admins: admins,
                 restricted: true,
                 minContribution: 0,
@@ -102,7 +88,6 @@ describe('deploy', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                feeManager: PBFeeManager.options.address,
                 minContribution: 0,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
@@ -120,7 +105,6 @@ describe('deploy', () => {
             web3, "PresalePool",
             creator,
             util.createPoolArgs({
-                feeManager: PBFeeManager.options.address,
                 minContribution: 0,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
@@ -143,7 +127,6 @@ describe('deploy', () => {
                 "PresalePool",
                 creator,
                 util.createPoolArgs({
-                    feeManager: PBFeeManager.options.address,
                     minContribution: 3,
                     maxContribution: 2,
                     maxPoolBalance: 5
@@ -156,7 +139,6 @@ describe('deploy', () => {
                 "PresalePool",
                 creator,
                 util.createPoolArgs({
-                    feeManager: PBFeeManager.options.address,
                     minContribution: 3,
                     maxContribution: 0,
                     maxPoolBalance: 5
@@ -168,7 +150,6 @@ describe('deploy', () => {
                 web3, "PresalePool",
                 creator,
                 util.createPoolArgs({
-                    feeManager: PBFeeManager.options.address,
                     minContribution: 0,
                     maxContribution: 2,
                     maxPoolBalance: 1
@@ -180,7 +161,6 @@ describe('deploy', () => {
                 web3, "PresalePool",
                 creator,
                 util.createPoolArgs({
-                    feeManager: PBFeeManager.options.address,
                     minContribution: 3,
                     maxPoolBalance: 2,
                     maxContribution: 4
