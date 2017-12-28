@@ -10,6 +10,7 @@ describe('open state', () => {
     let buyer1;
     let buyer2;
     let web3;
+    let PBFeeManager;
 
     before(async () => {
         let result = await server.setUp();
@@ -17,6 +18,17 @@ describe('open state', () => {
         creator = result.addresses[0].toLowerCase();
         buyer1 = result.addresses[1].toLowerCase();
         buyer2 = result.addresses[2].toLowerCase();
+        let feeTeamMember = result.addresses[result.addresses.length-1].toLowerCase();
+        PBFeeManager = await util.deployContract(
+            web3,
+            "PBFeeManager",
+            creator,
+            [
+                [feeTeamMember],
+                web3.utils.toWei(0.005, "ether"),
+                web3.utils.toWei(0.01, "ether")
+            ]
+        );
     });
 
     after(async () => {
@@ -30,6 +42,7 @@ describe('open state', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
+                feeManager: PBFeeManager.options.address,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether")
             })
@@ -113,6 +126,21 @@ describe('open state', () => {
         let buyerBalanceAfterRefund = await web3.eth.getBalance(buyer1);
         let difference = parseInt(buyerBalanceAfterRefund) - parseInt(buyerBalance);
         expect(difference / web3.utils.toWei(4, "ether")).to.be.within(.98, 1.0);
+    });
+
+    it('does not allow WithdrawAllForMany()', async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
+
+        await util.expectVMException(
+            util.methodWithGas(
+                PresalePool.methods.withdrawAllForMany([buyer1]),
+                creator,
+            )
+        );
     });
 
     it('does not refund participants without deposits', async () => {
@@ -382,8 +410,25 @@ describe('open state', () => {
         });
 
         await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.payToPresale(creator, 1), creator)
+            util.methodWithGas(PresalePool.methods.payToPresale(creator, 0, 0, '0x'), creator)
         );
+    });
+
+    it('allows WithdrawAllForMany() on failed state', async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
+
+        await util.methodWithGas(PresalePool.methods.fail(), creator);
+
+        await util.expectBalanceChange(web3, buyer1, web3.utils.toWei(5, "ether"), () =>{
+            return util.methodWithGas(
+                PresalePool.methods.withdrawAllForMany([buyer1]),
+                buyer2
+            );
+        });
     });
 });
 

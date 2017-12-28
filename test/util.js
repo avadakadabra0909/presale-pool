@@ -1,20 +1,20 @@
 const fs = require("fs");
 const chai = require('chai');
-const solc = require('solc')
+const solc = require('solc');
+const Web3Utils = require('web3-utils');
 
 const expect = chai.expect;
 
 function findImports (name) {
-    let path = `./contracts/${name}`;
+    let filePath = `./contracts/${name}`;
     try {
-        let source = fs.readFileSync(path, 'utf8');
+        let source = fs.readFileSync(filePath, 'utf8');
         return { contents: source };
     } catch (error) {
         return { error: 'File not found' };
     }
 }
 
-let libs = ["Util", "Fraction", "QuotaTracker"];
 let compileCache = {};
 
 function compileContract(contractName) {
@@ -23,18 +23,15 @@ function compileContract(contractName) {
     }
 
     let content = fs.readFileSync(`./contracts/${contractName}.sol`, 'utf8');
-    let = key = `${contractName}.sol`;
     let input = {};
-    input[key] = content;
+    input[contractName] = content;
 
-    compileCache[contractName] = solc.compile(
+    let result = solc.compile(
         { sources: input }, 1, findImports
     );
-    return compileCache[contractName];
-}
-
-function contractNameToKey(contractName) {
-    return `${contractName}.sol:${contractName}`;
+    let compiledContract = result.contracts[`${contractName}:${contractName}`];
+    compileCache[contractName] = compiledContract;
+    return compiledContract;
 }
 
 async function deployCompiledContract(web3, bytecode, abi, creatorAddress, contractArgs, initialBalance) {
@@ -53,46 +50,14 @@ async function deployCompiledContract(web3, bytecode, abi, creatorAddress, contr
     return await deploy.send(sendOptions);
 }
 
-async function deployContractHelper(web3, contractName, creatorAddress, libMapping, contractArgs, initialBalance) {
-    let result = compileContract(contractName);
-    let compiledContract = result.contracts[contractNameToKey(contractName)];
-
-    for (let i= 0; i < libs.length; i++) {
-        let libName = libs[i];
-        if (libName === contractName) {
-            continue;
-        }
-
-        let key = contractNameToKey(libName);
-
-        if (result.contracts[key] && !libMapping[key]) {
-            let deployedLib =  await deployContractHelper(
-                web3,
-                libName,
-                creatorAddress,
-                libMapping,
-                []
-            );
-            libMapping[key] = deployedLib.options.address;
-        }
-    }
+async function deployContract(web3, contractName, creatorAddress, contractArgs, initialBalance) {
+    let compiledContract = compileContract(contractName);
 
     return await deployCompiledContract(
         web3,
-        solc.linkBytecode(compiledContract.bytecode, libMapping),
+        compiledContract.bytecode,
         compiledContract.interface,
         creatorAddress,
-        contractArgs,
-        initialBalance
-    );
-}
-
-async function deployContract(web3, contractName, creatorAddress, contractArgs, initialBalance) {
-    return await deployContractHelper(
-        web3,
-        contractName,
-        creatorAddress,
-        {},
         contractArgs,
         initialBalance
     );
@@ -102,12 +67,14 @@ function createPoolArgs(options) {
     let args = [];
     options = options || {};
     args.push(options.feeManager || "1111111111111111111111111111111111111111");
-    args.push(options.feesPerEther || 0);
+    args.push(options.creatorFeesPerEther || 0);
     args.push(options.minContribution || 0);
     args.push(options.maxContribution || 0);
     args.push(options.maxPoolBalance || 0);
     args.push(options.admins || []);
     args.push(options.restricted || false);
+    args.push(options.totalTokenDrops || 0);
+    args.push(options.autoDistributeGasRecipient || "1111111111111111111111111111111111111111");
 
     return args;
 }
@@ -161,8 +128,13 @@ async function verifyState(web3, PresalePool, expectedBalances, expectedPoolBala
     let balances = await getBalances(PresalePool);
 
     let totalContribution = 0;
+    let totalContributors = 0;
     Object.values(balances).forEach((value) => {
-        totalContribution += parseInt(value.contribution);
+        let c = parseInt(value.contribution);
+        totalContribution += c;
+        if (c > 0) {
+            totalContributors++;
+        }
     });
 
     for (let [address, balance] of Object.entries(expectedBalances)) {
@@ -176,6 +148,10 @@ async function verifyState(web3, PresalePool, expectedBalances, expectedPoolBala
 
     let poolContributionBalance = await PresalePool.methods.poolContributionBalance().call();
     expect(parseInt(poolContributionBalance)).to.equal(totalContribution);
+
+    expect(parseInt(
+        await PresalePool.methods.totalContributors().call()
+    )).to.equal(totalContributors);
 }
 
 async function expectBalanceChangeAddresses(web3, addresses, expectedDifference, operation) {
@@ -205,7 +181,7 @@ async function expectBalanceChanges(web3, addresses, differences, operation) {
             );
             expect(differenceInEther).to.be.closeTo(0, 0.01);
         } else {
-            expect(difference / expectedDifference).to.be.within(.98, 1.0);
+            expect(difference / expectedDifference).to.be.within(.98, 1.00001);
         }
     }
 }
@@ -221,13 +197,24 @@ async function expectBalanceChange(web3, address, expectedDifference, operation)
         );
         expect(differenceInEther).to.be.closeTo(0, 0.01);
     } else {
-        expect(difference / expectedDifference).to.be.within(.98, 1.0);
+        expect(difference / expectedDifference).to.be.within(.98, 1.00001);
     }
+}
+
+function distributionGasCosts(options) {
+    let { numContributors, numDrops, gasPriceGwei } = options;
+    if (gasPriceGwei == null) {
+        gasPriceGwei = 60 * Math.pow(10, 9);
+    } else {
+        gasPriceGwei *= Math.pow(10, 9);
+    }
+    return 150000 * numContributors * gasPriceGwei * numDrops;
 }
 
 module.exports = {
     createPoolArgs: createPoolArgs,
     deployContract: deployContract,
+    distributionGasCosts: distributionGasCosts,
     expectBalanceChange: expectBalanceChange,
     expectBalanceChanges: expectBalanceChanges,
     expectBalanceChangeAddresses: expectBalanceChangeAddresses,

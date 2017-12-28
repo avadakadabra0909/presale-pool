@@ -9,6 +9,13 @@ library Util {
         return b;
     }
 
+    function max(uint a, uint b) pure internal returns (uint _max) {
+        if (a < b) {
+            return b;
+        }
+        return a;
+    }
+
     function contains(address[] storage list, address addr) internal constant returns (bool) {
         for (uint i = 0; i < list.length; i++) {
             if (list[i] == addr) {

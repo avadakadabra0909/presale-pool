@@ -12,6 +12,7 @@ describe('setContributionSettings()', () => {
     let buyer1;
     let buyer2;
     let web3;
+    let PBFeeManager;
 
     before(async () => {
         let result = await server.setUp();
@@ -19,6 +20,17 @@ describe('setContributionSettings()', () => {
         creator = result.addresses[0].toLowerCase();
         buyer1 = result.addresses[1].toLowerCase();
         buyer2 = result.addresses[2].toLowerCase();
+        let feeTeamMember = result.addresses[result.addresses.length-1].toLowerCase();
+        PBFeeManager = await util.deployContract(
+            web3,
+            "PBFeeManager",
+            creator,
+            [
+                [feeTeamMember],
+                web3.utils.toWei(0.005, "ether"),
+                web3.utils.toWei(0.01, "ether")
+            ]
+        );
     });
 
     after(async () => {
@@ -32,6 +44,7 @@ describe('setContributionSettings()', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
+                feeManager: PBFeeManager.options.address,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether")
             })
