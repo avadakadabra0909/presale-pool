@@ -101,6 +101,7 @@ contract PresalePool {
         uint _gasPrice
     );
     event RefundRecieved(
+        address _senderAddress,
         uint _value
     );
     event ERC223TokensReceived(
@@ -120,7 +121,7 @@ contract PresalePool {
         bool _succeeded,
         uint _poolTokenBalance
     );
-    event Withdrawl(
+    event Withdrawal(
         address _to,
         uint _value,
         uint _remaining,
@@ -261,7 +262,7 @@ contract PresalePool {
 
     function () external payable onState(State.Refund) {
         require(msg.sender == refundSenderAddress);
-        RefundRecieved(msg.value);
+        RefundRecieved(msg.sender, msg.value);
     }
 
     function airdropEther(uint gasPrice) external payable canClaimTokens {
@@ -402,7 +403,7 @@ contract PresalePool {
             poolContributionBalance -= balance.contribution;
             balance.contribution = 0;
 
-            Withdrawl(
+            Withdrawal(
                 msg.sender,
                 total,
                 0,
@@ -447,7 +448,7 @@ contract PresalePool {
             }
         }
 
-        Withdrawl(
+        Withdrawal(
             msg.sender,
             amount,
             balance.remaining,
@@ -664,7 +665,7 @@ contract PresalePool {
             return;
         }
 
-        Withdrawl(
+        Withdrawal(
             recipient,
             total,
             0,
@@ -695,7 +696,7 @@ contract PresalePool {
             return;
         }
 
-        Withdrawl(
+        Withdrawal(
             recipient,
             total,
             0,
