@@ -366,7 +366,7 @@ describe('autoDistribute', () => {
                     maxContribution: web3.utils.toWei(50, "ether"),
                     maxPoolBalance: web3.utils.toWei(50, "ether"),
                     totalTokenDrops: totalTokenDrops,
-                    autoDistributeGasRecipient: gasFeeRecipient
+                    autoDistributionWallet: gasFeeRecipient
                 })
             );
         });

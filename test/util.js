@@ -74,7 +74,7 @@ function createPoolArgs(options) {
     args.push(options.admins || []);
     args.push(options.restricted || false);
     args.push(options.totalTokenDrops || 0);
-    args.push(options.autoDistributeGasRecipient || "1111111111111111111111111111111111111111");
+    args.push(options.autoDistributionWallet || "1111111111111111111111111111111111111111");
 
     return args;
 }

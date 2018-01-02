@@ -60,7 +60,7 @@ contract PresalePool {
     uint public feesPerEther;
 
     uint public totalTokenDrops;
-    address public autoDistributeGasRecipient;
+    address public autoDistributionWallet;
 
     event Deposit(
         address _from,
@@ -71,7 +71,7 @@ contract PresalePool {
     event AutoDistributionConfigured(
         uint _autoDistributeGasPrice,
         uint _totalTokenDrops,
-        address _autoDistributeGasRecipient
+        address _autoDistributionWallet
     );
     event TransactionForwarded(
         address _destination,
@@ -183,7 +183,7 @@ contract PresalePool {
         address[] _admins,
         bool _restricted,
         uint _totalTokenDrops,
-        address _autoDistributeGasRecipient
+        address _autoDistributionWallet
     ) payable
     {
         AddAdmin(msg.sender);
@@ -200,10 +200,10 @@ contract PresalePool {
         AutoDistributionConfigured(
             MAX_GAS_PRICE,
             _totalTokenDrops,
-            _autoDistributeGasRecipient
+            _autoDistributionWallet
         );
         totalTokenDrops = _totalTokenDrops;
-        autoDistributeGasRecipient = _autoDistributeGasRecipient;
+        autoDistributionWallet = _autoDistributionWallet;
 
         ContributionSettingsChanged(
             _minContribution,
@@ -335,12 +335,11 @@ contract PresalePool {
     function forwardTransaction(address destination, uint gasLimit, bytes data) payable external onlyAdmins {
         require(state != State.Failed);
         TransactionForwarded(destination, gasLimit, data);
+        require(msg.value == 0);
         require(
             destination.call.gas(
                 (gasLimit > 0) ? gasLimit : msg.gas
-            ).value(
-                msg.value
-            )(data)
+            ).value(0)(data)
         );
     }
 
@@ -533,7 +532,7 @@ contract PresalePool {
         AutoDistributionConfigured(
             MAX_GAS_PRICE,
             totalTokenDrops,
-            autoDistributeGasRecipient
+            autoDistributionWallet
         );
     }
 
@@ -732,7 +731,7 @@ contract PresalePool {
 
     function transferAutoDistributionFees(uint gasCosts) internal {
         if (gasCosts > 0) {
-            autoDistributeGasRecipient.transfer(gasCosts);
+            autoDistributionWallet.transfer(gasCosts);
         }
     }
 

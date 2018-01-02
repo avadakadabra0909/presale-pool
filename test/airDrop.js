@@ -53,7 +53,7 @@ describe('Air Drop', () => {
                 feeManager: PBFeeManager.options.address,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-                autoDistributeGasRecipient: gasFeeRecipient
+                autoDistributionWallet: gasFeeRecipient
             })
         );
 
