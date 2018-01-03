@@ -129,26 +129,21 @@ describe('deploy', () => {
         expect(await util.getBalances(PresalePool)).to.deep.equal({});
     });
 
-    it('can be deployed with balance', async () => {
-        let PresalePool = await util.deployContract(
-            web3, "PresalePool",
-            creator,
-            util.createPoolArgs({
-                feeManager: PBFeeManager.options.address,
-                minContribution: 0,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether"),
-            }),
-            web3.utils.toWei(5, "ether"),
-            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
+    it('cant be deployed with balance', async () => {
+        await util.expectVMException(
+            util.deployContract(
+                web3, "PresalePool",
+                creator,
+                util.createPoolArgs({
+                    feeManager: PBFeeManager.options.address,
+                    minContribution: 0,
+                    maxContribution: web3.utils.toWei(50, "ether"),
+                    maxPoolBalance: web3.utils.toWei(50, "ether"),
+                }),
+                web3.utils.toWei(5, "ether"),
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
+            )
         );
-
-        let expectedBalances = {}
-        expectedBalances[creator] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(5, "ether")
-        }
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
     });
 
     it('validates contribution settings during deploy', async () => {

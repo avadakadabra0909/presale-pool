@@ -149,8 +149,8 @@ library PoolLib {
         address _participant
     );
     event StateChange(
-        State _from,
-        State _to
+        uint8 _from,
+        uint8 _to
     );
     event AddAdmin(
         address _admin
@@ -221,10 +221,6 @@ library PoolLib {
             AddAdmin(admin);
             self.admins.push(admin);
             self.balances[admin].whitelisted = true;
-        }
-
-        if (msg.value > 0) {
-            deposit(self);
         }
     }
 
@@ -649,7 +645,7 @@ library PoolLib {
     }
 
     function changeState(PoolStorage storage self, State desiredState) {
-        StateChange(self.state, desiredState);
+        StateChange(uint8(self.state), uint8(desiredState));
         self.state = desiredState;
     }
 

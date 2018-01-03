@@ -17,8 +17,7 @@ contract PresalePool {
         bool _restricted,
         uint _totalTokenDrops,
         address _autoDistributionWallet
-    ) payable
-    {
+    ) {
         poolStorage.create(
             _feeManager,
             _creatorFeesPerEther,
