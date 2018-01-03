@@ -14,6 +14,7 @@ describe('pay to presale address', () => {
     let web3;
     let PBFeeManager;
     let poolFee = 0.005;
+    let PresalePoolLib;
 
     before(async () => {
         let result = await server.setUp();
@@ -33,6 +34,12 @@ describe('pay to presale address', () => {
                 web3.utils.toWei(0.01, "ether")
             ]
         );
+        PresalePoolLib = await util.deployContract(
+            web3,
+            "PoolLib",
+            creator,
+            []
+        );
     });
 
 
@@ -50,7 +57,9 @@ describe('pay to presale address', () => {
                 feeManager: PBFeeManager.options.address,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether")
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
     });
 

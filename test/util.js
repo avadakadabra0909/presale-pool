@@ -50,12 +50,17 @@ async function deployCompiledContract(web3, bytecode, abi, creatorAddress, contr
     return await deploy.send(sendOptions);
 }
 
-async function deployContract(web3, contractName, creatorAddress, contractArgs, initialBalance) {
+async function deployContract(web3, contractName, creatorAddress, contractArgs, initialBalance, libs) {
     let compiledContract = compileContract(contractName);
+
+    let bytecode = compiledContract.bytecode;
+    if (libs) {
+        bytecode = solc.linkBytecode(bytecode, libs);
+    }
 
     return await deployCompiledContract(
         web3,
-        compiledContract.bytecode,
+        bytecode,
         compiledContract.interface,
         creatorAddress,
         contractArgs,
@@ -83,7 +88,7 @@ function expectVMException(prom) {
     return new Promise(
         function (resolve, reject) {
             prom.catch((e) => {
-                expect(e.message).to.include("invalid opcode")
+                expect(e.message).to.include("VM Exception")
                 resolve(e);
             });
         }

@@ -17,6 +17,7 @@ describe('Chaining pools', () => {
     let PBFeeManager;
     let TestToken;
     let feeTeamMember;
+    let PresalePoolLib;
 
     before(async () => {
         let result = await server.setUp();
@@ -30,6 +31,13 @@ describe('Chaining pools', () => {
         buyer5 = addresses[5].toLowerCase();
         otherCreator = addresses[7].toLowerCase();
         feeTeamMember = addresses[8].toLowerCase();
+        PresalePoolLib = await util.deployContract(
+            web3,
+            "PoolLib",
+            creator,
+            []
+        );
+
         PBFeeManager = await util.deployContract(
             web3,
             "PBFeeManager",
@@ -54,7 +62,9 @@ describe('Chaining pools', () => {
                 feeManager: PBFeeManager.options.address,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         OtherPool = await util.deployContract(
@@ -66,7 +76,9 @@ describe('Chaining pools', () => {
                 feeManager: PBFeeManager.options.address,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         TestToken = await util.deployContract(

@@ -10,6 +10,7 @@ describe('deploy', () => {
     let addresses;
     let web3;
     let PBFeeManager;
+    let PresalePoolLib;
 
     before(async () => {
         let result = await server.setUp();
@@ -17,6 +18,13 @@ describe('deploy', () => {
         creator = result.addresses[0].toLowerCase();
         addresses = result.addresses;
         let feeTeamMember = addresses[addresses.length-1].toLowerCase();
+        PresalePoolLib = await util.deployContract(
+            web3,
+            "PoolLib",
+            creator,
+            []
+        );
+
         PBFeeManager = await util.deployContract(
             web3,
             "PBFeeManager",
@@ -46,7 +54,9 @@ describe('deploy', () => {
                 minContribution: 0,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
         let poolBalance = await web3.eth.getBalance(
             PresalePool.options.address
@@ -75,7 +85,9 @@ describe('deploy', () => {
                 minContribution: 0,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         await util.expectVMException(
@@ -106,7 +118,9 @@ describe('deploy', () => {
                 minContribution: 0,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
         let poolBalance = await web3.eth.getBalance(
             PresalePool.options.address
@@ -125,7 +139,8 @@ describe('deploy', () => {
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
             }),
-            web3.utils.toWei(5, "ether")
+            web3.utils.toWei(5, "ether"),
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         let expectedBalances = {}
@@ -147,7 +162,9 @@ describe('deploy', () => {
                     minContribution: 3,
                     maxContribution: 2,
                     maxPoolBalance: 5
-                })
+                }),
+                0,
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
             )
         );
         await util.expectVMException(
@@ -160,7 +177,9 @@ describe('deploy', () => {
                     minContribution: 3,
                     maxContribution: 0,
                     maxPoolBalance: 5
-                })
+                }),
+                0,
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
             )
         );
         await util.expectVMException(
@@ -172,7 +191,9 @@ describe('deploy', () => {
                     minContribution: 0,
                     maxContribution: 2,
                     maxPoolBalance: 1
-                })
+                }),
+                0,
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
             )
         );
         await util.expectVMException(
@@ -184,7 +205,9 @@ describe('deploy', () => {
                     minContribution: 3,
                     maxPoolBalance: 2,
                     maxContribution: 4
-                })
+                }),
+                0,
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
             )
         );
     });

@@ -13,6 +13,7 @@ describe('expectRefund', () => {
     let web3;
     let PBFeeManager;
     let poolFee = 0.005;
+    let PresalePoolLib;
 
     before(async () => {
         let result = await server.setUp();
@@ -33,6 +34,12 @@ describe('expectRefund', () => {
                 web3.utils.toWei(0.01, "ether")
             ]
         );
+        PresalePoolLib = await util.deployContract(
+            web3,
+            "PoolLib",
+            creator,
+            []
+        );
     });
 
     let PresalePool;
@@ -45,7 +52,9 @@ describe('expectRefund', () => {
                 feeManager: PBFeeManager.options.address,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether")
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
     });
 

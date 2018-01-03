@@ -14,6 +14,7 @@ describe('autoDistribute', () => {
     let gasFeeRecipient;
     let web3;
     let PBFeeManager;
+    let PresalePoolLib;
 
     before(async () => {
         let result = await server.setUp();
@@ -28,6 +29,13 @@ describe('autoDistribute', () => {
         buyer6 = addresses[6].toLowerCase();
         gasFeeRecipient = addresses[7].toLowerCase();
         let feeTeamMember = addresses[8].toLowerCase();
+        PresalePoolLib = await util.deployContract(
+            web3,
+            "PoolLib",
+            creator,
+            []
+        );
+
         PBFeeManager = await util.deployContract(
             web3,
             "PBFeeManager",
@@ -55,7 +63,9 @@ describe('autoDistribute', () => {
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
                 totalTokenDrops: 10
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         expect(
@@ -88,7 +98,9 @@ describe('autoDistribute', () => {
                 minContribution: web3.utils.toWei(10, "ether"),
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         expect(
@@ -130,7 +142,9 @@ describe('autoDistribute', () => {
                 minContribution: web3.utils.toWei(10, "ether"),
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         await util.methodWithGas(
@@ -156,7 +170,9 @@ describe('autoDistribute', () => {
                 minContribution: web3.utils.toWei(1, "ether"),
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         await util.methodWithGas(
@@ -191,7 +207,9 @@ describe('autoDistribute', () => {
                 minContribution: web3.utils.toWei(1, "ether"),
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         await util.methodWithGas(
@@ -249,7 +267,9 @@ describe('autoDistribute', () => {
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
                 totalTokenDrops: 1
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         await util.expectVMException(
@@ -367,7 +387,9 @@ describe('autoDistribute', () => {
                     maxPoolBalance: web3.utils.toWei(50, "ether"),
                     totalTokenDrops: totalTokenDrops,
                     autoDistributionWallet: gasFeeRecipient
-                })
+                }),
+                0,
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
             );
         });
 

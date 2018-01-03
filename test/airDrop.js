@@ -16,6 +16,7 @@ describe('Air Drop', () => {
     let PBFeeManager;
     let TestToken;
     let feeTeamMember;
+    let PresalePoolLib;
 
     before(async () => {
         let result = await server.setUp();
@@ -30,6 +31,13 @@ describe('Air Drop', () => {
         buyer6 = addresses[6].toLowerCase();
         gasFeeRecipient = addresses[7].toLowerCase();
         feeTeamMember = addresses[8].toLowerCase();
+        PresalePoolLib = await util.deployContract(
+            web3,
+            "PoolLib",
+            creator,
+            []
+        );
+
         PBFeeManager = await util.deployContract(
             web3,
             "PBFeeManager",
@@ -54,7 +62,9 @@ describe('Air Drop', () => {
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
                 autoDistributionWallet: gasFeeRecipient
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         TestToken = await util.deployContract(
