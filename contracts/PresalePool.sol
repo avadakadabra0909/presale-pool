@@ -39,12 +39,12 @@ contract PresalePool {
         poolStorage.refund();
     }
 
-    function airdropEther(uint gasPrice) external payable {
-        poolStorage.airdropEther(gasPrice);
+    function airdropEther(uint gasPrice, address autoDistributionWallet) external payable {
+        poolStorage.airdropEther(gasPrice, autoDistributionWallet);
     }
 
-    function airdropTokens(address tokenAddress, uint gasPrice) external payable {
-        poolStorage.airdropTokens(tokenAddress, gasPrice);
+    function airdropTokens(address tokenAddress, uint gasPrice, address autoDistributionWallet) external payable {
+        poolStorage.airdropTokens(tokenAddress, gasPrice, autoDistributionWallet);
     }
 
     function tokenFallback(address _from, uint _value, bytes _data) external {

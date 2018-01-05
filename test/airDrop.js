@@ -60,8 +60,7 @@ describe('Air Drop', () => {
                 minContribution: web3.utils.toWei(1, "ether"),
                 feeManager: PBFeeManager.options.address,
                 maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether"),
-                autoDistributionWallet: gasFeeRecipient
+                maxPoolBalance: web3.utils.toWei(50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -183,14 +182,22 @@ describe('Air Drop', () => {
     it('cant be called in open state', async () => {
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.airdropEther(1),
-                creator
+                PresalePool.methods.airdropEther(
+                    1,
+                    gasFeeRecipient
+                ),
+                creator,
+                web3.utils.toWei(11, "ether")
             )
         );
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.airdropTokens(TestToken.options.address, 1),
+                PresalePool.methods.airdropTokens(
+                    TestToken.options.address,
+                    1,
+                    gasFeeRecipient
+                ),
                 creator
             )
         );
@@ -204,14 +211,22 @@ describe('Air Drop', () => {
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.airdropEther(1),
-                creator
+                PresalePool.methods.airdropEther(
+                    1,
+                    gasFeeRecipient
+                ),
+                creator,
+                web3.utils.toWei(11, "ether")
             )
         );
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.airdropTokens(TestToken.options.address, 1),
+                PresalePool.methods.airdropTokens(
+                    TestToken.options.address,
+                    1,
+                    gasFeeRecipient
+                ),
                 creator
             )
         );
@@ -228,14 +243,22 @@ describe('Air Drop', () => {
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.airdropEther(1),
-                creator
+                PresalePool.methods.airdropEther(
+                    1,
+                    gasFeeRecipient
+                ),
+                creator,
+                web3.utils.toWei(11, "ether")
             )
         );
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.airdropTokens(TestToken.options.address, 1),
+                PresalePool.methods.airdropTokens(
+                    TestToken.options.address,
+                    1,
+                    gasFeeRecipient
+                ),
                 creator
             )
         );
@@ -257,14 +280,22 @@ describe('Air Drop', () => {
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.airdropEther(1),
-                creator
+                PresalePool.methods.airdropEther(
+                    1,
+                    gasFeeRecipient
+                ),
+                creator,
+                web3.utils.toWei(11, "ether")
             )
         );
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.airdropTokens(TestToken.options.address, 1),
+                PresalePool.methods.airdropTokens(
+                    TestToken.options.address,
+                    1,
+                    gasFeeRecipient
+                ),
                 creator
             )
         );
@@ -289,7 +320,10 @@ describe('Air Drop', () => {
         });
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.airdropEther(web3.utils.toWei(5, "gwei")),
+                PresalePool.methods.airdropEther(
+                    web3.utils.toWei(5, "gwei"),
+                    gasFeeRecipient
+                ),
                 buyer6,
                 gasCosts
             )
@@ -297,7 +331,10 @@ describe('Air Drop', () => {
 
         await util.expectBalanceChange(web3, gasFeeRecipient, gasCosts, () => {
             return util.methodWithGas(
-                PresalePool.methods.airdropEther(web3.utils.toWei(5, "gwei")),
+                PresalePool.methods.airdropEther(
+                    web3.utils.toWei(5, "gwei"),
+                    gasFeeRecipient
+                ),
                 buyer6,
                 gasCosts + parseInt(web3.utils.toWei(11, "ether"))
             )
@@ -355,7 +392,10 @@ describe('Air Drop', () => {
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.airdropEther(0),
+                PresalePool.methods.airdropEther(
+                    0,
+                    gasFeeRecipient
+                ),
                 creator,
                 0
             )
@@ -363,7 +403,10 @@ describe('Air Drop', () => {
 
         await util.expectBalanceChange(web3, gasFeeRecipient, 0, () => {
             return util.methodWithGas(
-                PresalePool.methods.airdropEther(web3.utils.toWei(5, "gwei")),
+                PresalePool.methods.airdropEther(
+                    web3.utils.toWei(5, "gwei"),
+                    gasFeeRecipient
+                ),
                 creator,
                 web3.utils.toWei(11, "ether")
             )
@@ -458,7 +501,8 @@ describe('Air Drop', () => {
             util.methodWithGas(
                 PresalePool.methods.airdropTokens(
                     OtherTestToken.options.address,
-                    web3.utils.toWei(5, "gwei")
+                    web3.utils.toWei(5, "gwei"),
+                    gasFeeRecipient
                 ),
                 buyer6,
                 gasCosts*0.99
@@ -468,7 +512,8 @@ describe('Air Drop', () => {
             util.methodWithGas(
                 PresalePool.methods.airdropTokens(
                     OtherTestToken.options.address,
-                    web3.utils.toWei(5, "gwei")
+                    web3.utils.toWei(5, "gwei"),
+                    gasFeeRecipient
                 ),
                 buyer6,
                 Math.floor(gasCosts*2.01)
@@ -479,7 +524,8 @@ describe('Air Drop', () => {
             return util.methodWithGas(
                 PresalePool.methods.airdropTokens(
                     OtherTestToken.options.address,
-                    web3.utils.toWei(5, "gwei")
+                    web3.utils.toWei(5, "gwei"),
+                    gasFeeRecipient
                 ),
                 buyer6,
                 gasCosts
