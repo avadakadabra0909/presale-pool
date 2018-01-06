@@ -299,7 +299,9 @@ describe('fees', () => {
             data: data
         });
 
-        let fees = await PresalePool.methods.feesPerEther().call();
+        let fees = await FeeManager.methods.getTotalFeesPerEther().call({
+            from: PresalePool.options.address
+        });
         expect(parseInt(fees)).to.be.equal(0);
     });
 
@@ -329,14 +331,18 @@ describe('fees', () => {
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
-        let fees = await PresalePool.methods.feesPerEther().call();
+        let fees = await FeeManager.methods.getTotalFeesPerEther().call({
+            from: PresalePool.options.address
+        });
         expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
 
         await util.methodWithGas(
             PresalePool.methods.discountFees(web3.utils.toWei(0.02, "ether"), web3.utils.toWei(0.01, "ether")),
             team[0]
         );
-        fees = await PresalePool.methods.feesPerEther().call();
+        fees = await FeeManager.methods.getTotalFeesPerEther().call({
+            from: PresalePool.options.address
+        });
         expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
 
         await util.expectVMException(
@@ -394,14 +400,18 @@ describe('fees', () => {
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
-        let fees = await PresalePool.methods.feesPerEther().call();
+        let fees = await FeeManager.methods.getTotalFeesPerEther().call({
+            from: PresalePool.options.address
+        });
         expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
 
         await util.methodWithGas(
             PresalePool.methods.discountFees(0, 0),
             team[0]
         );
-        fees = await PresalePool.methods.feesPerEther().call();
+        fees = await FeeManager.methods.getTotalFeesPerEther().call({
+            from: PresalePool.options.address
+        });
         expect(parseInt(fees)).to.be.equal(0);
 
         let buyer1 = addresses[3];
@@ -446,7 +456,9 @@ describe('fees', () => {
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
-        let fees = await PresalePool.methods.feesPerEther().call();
+        let fees = await FeeManager.methods.getTotalFeesPerEther().call({
+            from: PresalePool.options.address
+        });
         expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
 
         await util.methodWithGas(
@@ -456,7 +468,9 @@ describe('fees', () => {
             ),
             team[0]
         );
-        fees = await PresalePool.methods.feesPerEther().call();
+        fees = await FeeManager.methods.getTotalFeesPerEther().call({
+            from: PresalePool.options.address
+        });
         expect(fees).to.be.equal(web3.utils.toWei(0.02, "ether"));
 
         let buyer1 = addresses[3];
@@ -522,7 +536,9 @@ describe('fees', () => {
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
-        let fees = await PresalePool.methods.feesPerEther().call();
+        let fees = await FeeManager.methods.getTotalFeesPerEther().call({
+            from: PresalePool.options.address
+        });
         expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
 
         await util.methodWithGas(
@@ -532,7 +548,9 @@ describe('fees', () => {
             ),
             team[0]
         );
-        fees = await PresalePool.methods.feesPerEther().call();
+        fees = await FeeManager.methods.getTotalFeesPerEther().call({
+            from: PresalePool.options.address
+        });
         expect(fees).to.be.equal(web3.utils.toWei(0.02, "ether"));
 
         let buyer1 = addresses[3];
@@ -598,7 +616,9 @@ describe('fees', () => {
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
-        let fees = await PresalePool.methods.feesPerEther().call();
+        let fees = await FeeManager.methods.getTotalFeesPerEther().call({
+            from: PresalePool.options.address
+        });
         expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
 
         await util.methodWithGas(
@@ -608,7 +628,9 @@ describe('fees', () => {
             ),
             team[0]
         );
-        fees = await PresalePool.methods.feesPerEther().call();
+        fees = await FeeManager.methods.getTotalFeesPerEther().call({
+            from: PresalePool.options.address
+        });
         expect(fees).to.be.equal(web3.utils.toWei(0.025, "ether"));
 
         let buyer1 = addresses[6];
@@ -786,7 +808,7 @@ describe('fees', () => {
         expect(difference / expectedPayout).to.be.within(.98, 1.0);
 
         await util.methodWithGas(
-            PresalePool.methods.transferAllTokens(TestToken.options.address),
+            PresalePool.methods.transferTokensToAll(TestToken.options.address),
             creator
         );
         expect(await TestToken.methods.balanceOf(creator).call())

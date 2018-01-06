@@ -108,8 +108,8 @@ contract PresalePool {
         poolStorage.withdraw(amount);
     }
 
-    function transferAllTokens(address tokenAddress) external {
-        poolStorage.transferAllTokens(tokenAddress);
+    function transferTokensToAll(address tokenAddress) external {
+        poolStorage.transferTokensToAll(tokenAddress);
     }
 
     function transferTokensTo(address tokenAddress, address[] recipients) external {
@@ -162,9 +162,4 @@ contract PresalePool {
     function totalTokenDrops() external returns(uint) {
         return poolStorage.totalTokenDrops;
     }
-
-    function feesPerEther() external returns(uint) {
-        return poolStorage.feesPerEther;
-    }
-
 }

@@ -173,7 +173,7 @@ describe('Chaining pools', () => {
         );
 
         await util.methodWithGas(
-            PresalePool.methods.transferAllTokens(
+            PresalePool.methods.transferTokensToAll(
                 TestToken.options.address
             ),
             creator
@@ -185,7 +185,7 @@ describe('Chaining pools', () => {
         );
 
         await util.methodWithGas(
-            OtherPool.methods.transferAllTokens(
+            OtherPool.methods.transferTokensToAll(
                 TestToken.options.address
             ),
             otherCreator
