@@ -7,6 +7,14 @@ contract PresalePool {
 
     PoolLib.PoolStorage private poolStorage;
 
+    bool private locked;
+    modifier noReentrancy() {
+        require(!locked);
+        locked = true;
+        _;
+        locked = false;
+    }
+
     function PresalePool(
         address _feeManager,
         uint _creatorFeesPerEther,
@@ -108,11 +116,11 @@ contract PresalePool {
         poolStorage.withdraw(amount);
     }
 
-    function transferTokensToAll(address tokenAddress) external {
+    function transferTokensToAll(address tokenAddress) external noReentrancy {
         poolStorage.transferTokensToAll(tokenAddress);
     }
 
-    function transferTokensTo(address tokenAddress, address[] recipients) external {
+    function transferTokensTo(address tokenAddress, address[] recipients) external noReentrancy {
         poolStorage.transferTokensTo(tokenAddress, recipients);
     }
 
