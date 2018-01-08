@@ -679,6 +679,7 @@ library PoolLib {
             return;
         }
 
+        // Events
         Withdrawal(
             recipient,
             total,
@@ -686,13 +687,15 @@ library PoolLib {
             balance.contribution,
             self.poolContributionBalance
         );
-
-        self.poolRemainingBalance -= total;
-        total += share;
         RefundClaimed(recipient, share);
 
+        // Remove only if there is something remaining
+        if(total > 0) {
+          self.poolRemainingBalance -= total;
+          balance.remaining = 0;
+        }
+        total += share;
 
-        balance.remaining = 0;
         require(
             recipient.call.value(total)()
         );
