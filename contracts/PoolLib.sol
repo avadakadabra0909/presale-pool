@@ -313,6 +313,11 @@ library PoolLib {
         require(
             self.feeManager.getTotalFeesPerEther() >= (recipientFeesPerEther + teamFeesPerEther)
         );
+        FeeInstalled(
+            recipientFeesPerEther + teamFeesPerEther,
+            recipientFeesPerEther,
+            address(self.feeManager)
+        );
         self.feeManager.discountFees(recipientFeesPerEther, teamFeesPerEther);
     }
 
