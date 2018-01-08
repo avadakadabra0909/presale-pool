@@ -12,6 +12,9 @@ describe('pay to presale address', () => {
     let buyer2;
     let payoutAddress;
     let web3;
+    let PBFeeManager;
+    let poolFee = 0.005;
+    let PresalePoolLib;
 
     before(async () => {
         let result = await server.setUp();
@@ -20,6 +23,23 @@ describe('pay to presale address', () => {
         buyer1 = result.addresses[1].toLowerCase();
         buyer2 = result.addresses[2].toLowerCase();
         payoutAddress = result.addresses[3].toLowerCase();
+        let feeTeamMember = result.addresses[result.addresses.length-1].toLowerCase();
+        PBFeeManager = await util.deployContract(
+            web3,
+            "PBFeeManager",
+            creator,
+            [
+                [feeTeamMember],
+                web3.utils.toWei(0.005, "ether"),
+                web3.utils.toWei(0.01, "ether")
+            ]
+        );
+        PresalePoolLib = await util.deployContract(
+            web3,
+            "PoolLib",
+            creator,
+            []
+        );
     });
 
 
@@ -34,9 +54,12 @@ describe('pay to presale address', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
+                feeManager: PBFeeManager.options.address,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether")
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
     });
 
@@ -46,7 +69,8 @@ describe('pay to presale address', () => {
         await util.methodWithGas(
             PresalePool.methods.payToPresale(
                 payoutAddress,
-                minPoolTotal || expectedPayout
+                minPoolTotal || expectedPayout,
+                0, "0x"
             ),
             creator
         );
@@ -56,30 +80,68 @@ describe('pay to presale address', () => {
         expect(difference / expectedPayout).to.be.within(.98, 1.0);
     }
 
+    it("cant be called if the pool balance is 0", async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer2,
+            web3.utils.toWei(1, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(
+                web3.utils.toWei(2, "ether"), web3.utils.toWei(3, "ether"), web3.utils.toWei(3, "ether"), []
+            ),
+            creator
+        );
+        await util.expectVMException(
+            util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0, 0, "0x"), creator)
+        );
+    });
+
+
     it("cant be called from failed state", async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
         await util.methodWithGas(PresalePool.methods.fail(), creator)
 
         await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator)
+            util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0, 0, "0x"), creator)
         );
     });
 
     it("can only be called by creator", async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
         await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), buyer1)
+            util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0, 0, "0x"), buyer1)
         );
     });
 
     it("fails if the receiving address does not accept the payment", async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.payToPresale(PresalePool.options.address, 0),
+                PresalePool.methods.payToPresale(PresalePool.options.address, 0, 0, "0x"),
                 creator
             )
         );
     });
 
     it("fails if the receiving address uses all the gas", async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
         let GasHungry = await util.deployContract(
             web3,
             "GasHungry",
@@ -88,22 +150,32 @@ describe('pay to presale address', () => {
         );
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.payToPresale(GasHungry.options.address, 0),
+                PresalePool.methods.payToPresale(GasHungry.options.address, 0, 0, "0x"),
                 creator
             )
         );
     });
 
     it("cant be called more than once", async () => {
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator)
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
+        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0, 0, "0x"), creator)
 
         await util.expectVMException(
-            util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator)
+            util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0, 0, "0x"), creator)
         );
     });
 
     it("cant transition to failed state from paid state", async () => {
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator)
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
+        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0, 0, "0x"), creator)
 
         await util.expectVMException(
             util.methodWithGas(PresalePool.methods.fail(), creator)
@@ -111,7 +183,12 @@ describe('pay to presale address', () => {
     });
 
     it("does not accept deposits after a payout", async () => {
-        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0), creator)
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            web3.utils.toWei(5, "ether")
+        );
+        await util.methodWithGas(PresalePool.methods.payToPresale(payoutAddress, 0, 0, "0x"), creator)
         await util.expectVMException(
             util.methodWithGas(
                 PresalePool.methods.deposit(),
@@ -154,12 +231,12 @@ describe('pay to presale address', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(6, "ether"));
         await payToPresale(web3.utils.toWei(5, "ether"), 0);
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1 + 5*poolFee, "ether"));
 
         let buyerBalance = await web3.eth.getBalance(buyer2);
         await util.methodWithGas(PresalePool.methods.withdrawAll(), buyer2);
         expectedBalances[buyer2].remaining = web3.utils.toWei(0, "ether");
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5*poolFee, "ether"));
 
         let balanceAfterWithdrawl = await web3.eth.getBalance(buyer2);
         let difference = parseInt(balanceAfterWithdrawl) - parseInt(buyerBalance);
@@ -199,12 +276,15 @@ describe('pay to presale address', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(6, "ether"));
         await payToPresale(web3.utils.toWei(3, "ether"), 0);
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(3, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(3 + 3*poolFee, "ether"));
 
         let buyerBalance = await web3.eth.getBalance(buyer1);
-        await util.methodWithGas(PresalePool.methods.withdrawAll(), buyer1);
+        await util.methodWithGas(
+            PresalePool.methods.withdrawAllForMany([buyer1]),
+            buyer2
+        );
         expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether");
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(3*poolFee, "ether"));
 
         let balanceAfterWithdrawl = await web3.eth.getBalance(buyer1);
         let difference = parseInt(balanceAfterWithdrawl) - parseInt(buyerBalance);
@@ -244,7 +324,7 @@ describe('pay to presale address', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(6, "ether"));
         await payToPresale(web3.utils.toWei(2, "ether"), 0);
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(4, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(4 + 2*poolFee, "ether"));
 
         let buyerBalance = await web3.eth.getBalance(buyer1);
         //cant do partial withdrawls in paid state
@@ -259,7 +339,7 @@ describe('pay to presale address', () => {
             buyer1
         );
         expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether");
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1 + 2*poolFee, "ether"));
 
         let balanceAfterWithdrawl = await web3.eth.getBalance(buyer1);
         let difference = parseInt(balanceAfterWithdrawl) - parseInt(buyerBalance);
@@ -308,12 +388,12 @@ describe('pay to presale address', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(8, "ether"));
         await payToPresale(web3.utils.toWei(3, "ether"), 0);
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5 + 3*poolFee, "ether"));
 
         let buyerBalance = await web3.eth.getBalance(buyer1);
         await util.methodWithGas(PresalePool.methods.withdrawAll(), buyer1);
         expectedBalances[buyer1].remaining = web3.utils.toWei(0, "ether");
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1 + 3*poolFee, "ether"));
 
         let balanceAfterWithdrawl = await web3.eth.getBalance(buyer1);
         let difference = parseInt(balanceAfterWithdrawl) - parseInt(buyerBalance);
@@ -345,12 +425,12 @@ describe('pay to presale address', () => {
         }
         await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(6, "ether"));
         await payToPresale(web3.utils.toWei(5, "ether"), 0);
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(1 + 5*poolFee, "ether"));
 
         let buyerBalance = await web3.eth.getBalance(buyer2);
         await util.methodWithGas(PresalePool.methods.withdrawAll(), buyer2);
         expectedBalances[buyer2].remaining = web3.utils.toWei(0, "ether");
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5*poolFee, "ether"));
 
         let balanceAfterWithdrawl = await web3.eth.getBalance(buyer2);
         let difference = parseInt(balanceAfterWithdrawl) - parseInt(buyerBalance);
@@ -383,7 +463,8 @@ describe('pay to presale address', () => {
             util.methodWithGas(
                 PresalePool.methods.payToPresale(
                     payoutAddress,
-                    web3.utils.toWei(7, "ether")
+                    web3.utils.toWei(7, "ether"),
+                    0, "0x"
                 ),
                 creator
             )
@@ -407,7 +488,8 @@ describe('pay to presale address', () => {
             util.methodWithGas(
                 PresalePool.methods.payToPresale(
                     payoutAddress,
-                    web3.utils.toWei(6, "ether")
+                    web3.utils.toWei(6, "ether"),
+                    0, "0x"
                 ),
                 creator
             )

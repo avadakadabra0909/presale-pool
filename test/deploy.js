@@ -9,12 +9,32 @@ describe('deploy', () => {
     let creator;
     let addresses;
     let web3;
+    let PBFeeManager;
+    let PresalePoolLib;
 
     before(async () => {
         let result = await server.setUp();
         web3 = result.web3;
         creator = result.addresses[0].toLowerCase();
         addresses = result.addresses;
+        let feeTeamMember = addresses[addresses.length-1].toLowerCase();
+        PresalePoolLib = await util.deployContract(
+            web3,
+            "PoolLib",
+            creator,
+            []
+        );
+
+        PBFeeManager = await util.deployContract(
+            web3,
+            "PBFeeManager",
+            creator,
+            [
+                [feeTeamMember],
+                web3.utils.toWei(0.005, "ether"),
+                web3.utils.toWei(0.01, "ether")
+            ]
+        );
     });
 
     after(async () => {
@@ -29,11 +49,14 @@ describe('deploy', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
+                feeManager: PBFeeManager.options.address,
                 admins: admins,
                 minContribution: 0,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
         let poolBalance = await web3.eth.getBalance(
             PresalePool.options.address
@@ -56,12 +79,15 @@ describe('deploy', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
+                feeManager: PBFeeManager.options.address,
                 admins: admins,
                 restricted: true,
                 minContribution: 0,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
 
         await util.expectVMException(
@@ -88,10 +114,13 @@ describe('deploy', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
+                feeManager: PBFeeManager.options.address,
                 minContribution: 0,
                 maxContribution: web3.utils.toWei(50, "ether"),
                 maxPoolBalance: web3.utils.toWei(50, "ether"),
-            })
+            }),
+            0,
+            { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
         );
         let poolBalance = await web3.eth.getBalance(
             PresalePool.options.address
@@ -100,24 +129,21 @@ describe('deploy', () => {
         expect(await util.getBalances(PresalePool)).to.deep.equal({});
     });
 
-    it('can be deployed with balance', async () => {
-        let PresalePool = await util.deployContract(
-            web3, "PresalePool",
-            creator,
-            util.createPoolArgs({
-                minContribution: 0,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether"),
-            }),
-            web3.utils.toWei(5, "ether")
+    it('cant be deployed with balance', async () => {
+        await util.expectVMException(
+            util.deployContract(
+                web3, "PresalePool",
+                creator,
+                util.createPoolArgs({
+                    feeManager: PBFeeManager.options.address,
+                    minContribution: 0,
+                    maxContribution: web3.utils.toWei(50, "ether"),
+                    maxPoolBalance: web3.utils.toWei(50, "ether"),
+                }),
+                web3.utils.toWei(5, "ether"),
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
+            )
         );
-
-        let expectedBalances = {}
-        expectedBalances[creator] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(5, "ether")
-        }
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5, "ether"));
     });
 
     it('validates contribution settings during deploy', async () => {
@@ -127,10 +153,13 @@ describe('deploy', () => {
                 "PresalePool",
                 creator,
                 util.createPoolArgs({
+                    feeManager: PBFeeManager.options.address,
                     minContribution: 3,
                     maxContribution: 2,
                     maxPoolBalance: 5
-                })
+                }),
+                0,
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
             )
         );
         await util.expectVMException(
@@ -139,10 +168,13 @@ describe('deploy', () => {
                 "PresalePool",
                 creator,
                 util.createPoolArgs({
+                    feeManager: PBFeeManager.options.address,
                     minContribution: 3,
                     maxContribution: 0,
                     maxPoolBalance: 5
-                })
+                }),
+                0,
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
             )
         );
         await util.expectVMException(
@@ -150,10 +182,13 @@ describe('deploy', () => {
                 web3, "PresalePool",
                 creator,
                 util.createPoolArgs({
+                    feeManager: PBFeeManager.options.address,
                     minContribution: 0,
                     maxContribution: 2,
                     maxPoolBalance: 1
-                })
+                }),
+                0,
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
             )
         );
         await util.expectVMException(
@@ -161,10 +196,13 @@ describe('deploy', () => {
                 web3, "PresalePool",
                 creator,
                 util.createPoolArgs({
+                    feeManager: PBFeeManager.options.address,
                     minContribution: 3,
                     maxPoolBalance: 2,
                     maxContribution: 4
-                })
+                }),
+                0,
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
             )
         );
     });
