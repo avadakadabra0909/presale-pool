@@ -185,7 +185,7 @@ library PoolLib {
         uint256 code
     ) {
         PoolRegistry p = PoolRegistry(0x123456789ABCDEF);
-        p.register(msg.sender, code);
+        p.register(code);
         self.admins.push(msg.sender);
         AddAdmin(msg.sender);
 

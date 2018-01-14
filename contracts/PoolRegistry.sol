@@ -9,7 +9,8 @@ contract PoolRegistry {
         address _contractAddress
     );
 
-    function register(address contractCreator, uint256 code) external {
-        NewContract(contractCreator, code, msg.sender);
+    function register(uint256 code) external {
+        require(tx.origin != msg.sender);
+        NewContract(tx.origin, code, msg.sender);
     }
 }
