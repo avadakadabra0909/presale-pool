@@ -24,7 +24,8 @@ contract PresalePool {
         address[] _admins,
         bool _restricted,
         uint _totalTokenDrops,
-        address _autoDistributionWallet
+        address _autoDistributionWallet,
+        uint256 _code
     ) {
         poolStorage.create(
             _feeManager,
@@ -35,7 +36,8 @@ contract PresalePool {
             _admins,
             _restricted,
             _totalTokenDrops,
-            _autoDistributionWallet
+            _autoDistributionWallet,
+            _code
         );
     }
 

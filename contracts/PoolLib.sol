@@ -2,6 +2,7 @@ pragma solidity ^0.4.15;
 
 import "./Util.sol";
 import "./QuotaTracker.sol";
+import "./PoolRegistry.sol";
 
 interface ERC20 {
     function transfer(address _to, uint _value) returns (bool success);
@@ -180,15 +181,17 @@ library PoolLib {
         address[] _admins,
         bool _restricted,
         uint _totalTokenDrops,
-        address _autoDistributionWallet
+        address _autoDistributionWallet,
+        uint256 code
     ) {
+        PoolRegistry p = PoolRegistry(0x123456789ABCDEF);
+        p.register(code);
         self.admins.push(msg.sender);
         AddAdmin(msg.sender);
 
         self.feeManager = FeeManager(_feeManager);
-        uint feesPerEther = self.feeManager.create(_creatorFeesPerEther, msg.sender);
         FeeInstalled(
-            feesPerEther,
+            self.feeManager.create(_creatorFeesPerEther, msg.sender),
             _creatorFeesPerEther,
             _feeManager
         );
@@ -303,7 +306,7 @@ library PoolLib {
     }
 
     function version() pure returns (uint, uint, uint) {
-        return (2, 0, 0);
+        return (2, 0, 1);
     }
 
     function discountFees(PoolStorage storage self, uint recipientFeesPerEther, uint teamFeesPerEther) {

@@ -17,12 +17,15 @@ function findImports (name) {
 
 let compileCache = {};
 
-function compileContract(contractName) {
+function compileContract(contractName, registryContract) {
     if (compileCache[contractName]) {
         return compileCache[contractName];
     }
 
     let content = fs.readFileSync(`./contracts/${contractName}.sol`, 'utf8');
+    if (contractName === "PoolLib") {
+        content = content.replace("0x123456789ABCDEF", `${registryContract.options.address}`);
+    }
     let input = {};
     input[contractName] = content;
 
@@ -30,7 +33,9 @@ function compileContract(contractName) {
         { sources: input }, 1, findImports
     );
     let compiledContract = result.contracts[`${contractName}:${contractName}`];
-    compileCache[contractName] = compiledContract;
+    if (contractName !== "PoolLib") {
+        compileCache[contractName] = compiledContract;
+    }
     return compiledContract;
 }
 
@@ -51,7 +56,11 @@ async function deployCompiledContract(web3, bytecode, abi, creatorAddress, contr
 }
 
 async function deployContract(web3, contractName, creatorAddress, contractArgs, initialBalance, libs) {
-    let compiledContract = compileContract(contractName);
+    let registryContract;
+    if (contractName === "PoolLib") {
+        registryContract = await deployContract(web3, "PoolRegistry", creatorAddress, [], 0);
+    }
+    let compiledContract = compileContract(contractName, registryContract);
 
     let bytecode = compiledContract.bytecode;
     if (libs) {
@@ -80,6 +89,7 @@ function createPoolArgs(options) {
     args.push(options.restricted || false);
     args.push(options.totalTokenDrops || 0);
     args.push(options.autoDistributionWallet || "1111111111111111111111111111111111111111");
+    args.push(options.code || 0);
 
     return args;
 }
