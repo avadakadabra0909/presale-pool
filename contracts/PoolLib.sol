@@ -290,6 +290,7 @@ library PoolLib {
         changeState(self, State.Failed);
         self.poolRemainingBalance = this.balance - self.poolContributionBalance;
         if (self.totalTokenDrops > 0) {
+            self.totalTokenDrops = 1;
             uint gasCosts = calcDistributionFees(60e9, self.totalContributors, 1);
             self.autoDistributionWallet.transfer(gasCosts);
         }
@@ -443,11 +444,7 @@ library PoolLib {
             self.state == State.Refund || self.state == State.Failed || self.state == State.Paid
         );
 
-        uint totalTokenDrops = self.totalTokenDrops;
-        if (self.state == State.Failed && totalTokenDrops > 0) {
-            totalTokenDrops = 1;
-        }
-        uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, totalTokenDrops);
+        uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, self.totalTokenDrops);
         uint totalPoolContributionLessGasCosts = self.poolContributionBalance - self.totalContributors * gasCostsPerRecipient;
 
         withdrawRemainingAndSurplus(self, msg.sender, gasCostsPerRecipient, totalPoolContributionLessGasCosts);
@@ -457,11 +454,8 @@ library PoolLib {
         require(
             self.state == State.Refund || self.state == State.Failed || self.state == State.Paid
         );
-        uint totalTokenDrops = self.totalTokenDrops;
-        if (self.state == State.Failed && totalTokenDrops > 0) {
-            totalTokenDrops = 1;
-        }
-        uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, totalTokenDrops);
+
+        uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, self.totalTokenDrops);
         uint totalPoolContributionLessGasCosts = self.poolContributionBalance - self.totalContributors * gasCostsPerRecipient;
 
         for (uint i = 0; i < recipients.length; i++) {
