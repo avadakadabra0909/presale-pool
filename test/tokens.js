@@ -451,7 +451,7 @@ describe('confirmTokens', () => {
                             PresalePool.methods.transferTokensToAll(
                                 TestToken.options.address
                             ),
-                            creator
+                            tokenHolder
                         );
                 }
             );
@@ -509,7 +509,7 @@ describe('confirmTokens', () => {
                             TestToken.options.address,
                             [creator, buyer1, buyer2]
                         ),
-                        creator
+                        tokenHolder
                     );
                 }
             );
@@ -519,7 +519,7 @@ describe('confirmTokens', () => {
                         TestToken.options.address,
                         [creator, buyer1, buyer2]
                     ),
-                    creator
+                    tokenHolder
                 );
             });
 

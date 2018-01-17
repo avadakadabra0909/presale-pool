@@ -306,7 +306,7 @@ library PoolLib {
     }
 
     function version() pure returns (uint, uint, uint) {
-        return (2, 0, 1);
+        return (2, 0, 2);
     }
 
     function discountFees(PoolStorage storage self, uint recipientFeesPerEther, uint teamFeesPerEther) {
@@ -437,18 +437,35 @@ library PoolLib {
             require(
                 msg.sender.call.value(total)()
             );
-        } else if (self.state == State.Refund || self.state == State.Failed || self.state == State.Paid) {
-            withdrawRemainingAndSurplus(self, msg.sender);
+            return;
         }
+        require(
+            self.state == State.Refund || self.state == State.Failed || self.state == State.Paid
+        );
+
+        uint totalTokenDrops = self.totalTokenDrops;
+        if (self.state == State.Failed && totalTokenDrops > 0) {
+            totalTokenDrops = 1;
+        }
+        uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, totalTokenDrops);
+        uint totalPoolContributionLessGasCosts = self.poolContributionBalance - self.totalContributors * gasCostsPerRecipient;
+
+        withdrawRemainingAndSurplus(self, msg.sender, gasCostsPerRecipient, totalPoolContributionLessGasCosts);
     }
 
     function withdrawAllForMany(PoolStorage storage self, address[] recipients) {
         require(
             self.state == State.Refund || self.state == State.Failed || self.state == State.Paid
         );
+        uint totalTokenDrops = self.totalTokenDrops;
+        if (self.state == State.Failed && totalTokenDrops > 0) {
+            totalTokenDrops = 1;
+        }
+        uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, totalTokenDrops);
+        uint totalPoolContributionLessGasCosts = self.poolContributionBalance - self.totalContributors * gasCostsPerRecipient;
 
         for (uint i = 0; i < recipients.length; i++) {
-            withdrawRemainingAndSurplus(self, recipients[i]);
+            withdrawRemainingAndSurplus(self, recipients[i], gasCostsPerRecipient, totalPoolContributionLessGasCosts);
         }
     }
 
@@ -669,14 +686,19 @@ library PoolLib {
         self.state = desiredState;
     }
 
-    function withdrawRemainingAndSurplus(PoolStorage storage self, address recipient) {
+    function withdrawRemainingAndSurplus(PoolStorage storage self, address recipient, uint gasCostsPerRecipient, uint totalPoolContributionLessGasCosts) {
         ParticipantState storage balance = self.balances[recipient];
         uint total = balance.remaining;
+        uint numerator = balance.contribution;
+
+        if (numerator > 0) {
+            numerator -= gasCostsPerRecipient;
+        }
 
         uint share = self.extraEtherDeposits.claimShare(
             recipient,
             this.balance - self.totalFees - self.poolRemainingBalance,
-            [balance.contribution, self.poolContributionBalance]
+            [numerator, totalPoolContributionLessGasCosts]
         );
         if (share == 0 && total == 0) {
             return;
