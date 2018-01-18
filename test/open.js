@@ -9,6 +9,7 @@ describe('open state', () => {
     let creator;
     let buyer1;
     let buyer2;
+    let feeTeamMember;
     let web3;
     let PBFeeManager;
     let PresalePoolLib;
@@ -19,7 +20,7 @@ describe('open state', () => {
         creator = result.addresses[0].toLowerCase();
         buyer1 = result.addresses[1].toLowerCase();
         buyer2 = result.addresses[2].toLowerCase();
-        let feeTeamMember = result.addresses[result.addresses.length-1].toLowerCase();
+        feeTeamMember = result.addresses[result.addresses.length-1].toLowerCase();
         PBFeeManager = await util.deployContract(
             web3,
             "PBFeeManager",
@@ -439,5 +440,129 @@ describe('open state', () => {
             );
         });
     });
+
+    describe("withdraw in failed state with token drops", () => {
+        let PresalePool;
+        beforeEach(async () => {
+            PresalePool = await util.deployContract(
+                web3,
+                "PresalePool",
+                creator,
+                util.createPoolArgs({
+                    feeManager: PBFeeManager.options.address,
+                    minContribution: web3.utils.toWei(0.5, "ether"),
+                    maxContribution: web3.utils.toWei(50, "ether"),
+                    maxPoolBalance: web3.utils.toWei(50, "ether"),
+                    totalTokenDrops: 2
+                }),
+                0,
+                { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
+            );
+
+            await util.methodWithGas(
+                PresalePool.methods.deposit(),
+                creator,
+                web3.utils.toWei(2, "ether")
+            );
+            await util.methodWithGas(
+                PresalePool.methods.deposit(),
+                buyer1,
+                web3.utils.toWei(5, "ether")
+            );
+            await util.methodWithGas(
+                PresalePool.methods.deposit(),
+                buyer2,
+                web3.utils.toWei(1, "ether")
+            );
+
+            let expectedBalances = {}
+            expectedBalances[creator] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(2, "ether")
+            }
+            expectedBalances[buyer1] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(5, "ether")
+            }
+            expectedBalances[buyer2] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(1, "ether")
+            }
+            await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(8, "ether"));
+
+            await util.methodWithGas(
+                PresalePool.methods.setContributionSettings(
+                    web3.utils.toWei(0.5, "ether"),
+                    web3.utils.toWei(2, "ether"),
+                    web3.utils.toWei(3, "ether"),
+                    []
+                ),
+                creator
+            )
+            expectedBalances[creator] = {
+                remaining: web3.utils.toWei(0, "ether"),
+                contribution: web3.utils.toWei(2, "ether")
+            }
+            expectedBalances[buyer1] = {
+                remaining: web3.utils.toWei(4, "ether"),
+                contribution: web3.utils.toWei(1, "ether")
+            }
+            expectedBalances[buyer2] = {
+                remaining: web3.utils.toWei(1, "ether"),
+                contribution: web3.utils.toWei(0, "ether")
+            }
+            await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(8, "ether"));
+
+            await util.methodWithGas(PresalePool.methods.fail(), creator);
+        });
+
+        it("withdrawForMany sends the correct amount", async () => {
+            let originalContribution = parseInt(web3.utils.toWei(2, "ether"));
+            let gasCosts = util.distributionGasCosts({
+                numContributors: 1, numDrops: 1
+            });
+            let expectedReturns = [
+                parseInt(web3.utils.toWei(2, "ether")) - gasCosts,
+                parseInt(web3.utils.toWei(5, "ether")) - gasCosts,
+                parseInt(web3.utils.toWei(1, "ether")),
+            ];
+
+            await util.expectBalanceChanges(
+                web3,
+                [creator, buyer1, buyer2],
+                expectedReturns,
+                () => {
+                    return util.methodWithGas(
+                        PresalePool.methods.withdrawAllForMany([creator, buyer1, buyer2]),
+                        feeTeamMember
+                    )
+                }
+            );
+        });
+
+        it("withdrawAll sends the correct amount", async () => {
+            let originalContribution = parseInt(web3.utils.toWei(2, "ether"));
+            let gasCosts = util.distributionGasCosts({
+                numContributors: 1, numDrops: 1
+            });
+            let recipients = [creator, buyer1, buyer2];
+            let expectedReturns = [
+                parseInt(web3.utils.toWei(2, "ether")) - gasCosts,
+                parseInt(web3.utils.toWei(5, "ether")) - gasCosts,
+                parseInt(web3.utils.toWei(1, "ether")),
+            ];
+
+            for(let i = 0; i < expectedReturns.length; i++) {
+                let address = recipients[i];
+                await util.expectBalanceChange(web3, address, expectedReturns[i], () => {
+                    return util.methodWithGas(
+                        PresalePool.methods.withdrawAll(),
+                        address
+                    )
+                });
+            }
+        });
+    });
+
 });
 

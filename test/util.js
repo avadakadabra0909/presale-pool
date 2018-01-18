@@ -106,7 +106,7 @@ function expectVMException(prom) {
 }
 
 async function methodWithGas(method, from, value) {
-    let txn = { from: from, gas: 1000000 };
+    let txn = { from: from, gas: 1000000, gasPrice: 1};
     if (value) {
         txn.value = value;
     }
