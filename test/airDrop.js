@@ -346,7 +346,7 @@ describe('Air Drop', () => {
             [0, 3, 0, 7, 0, 0].map(x => web3.utils.toWei(x, "ether")),
             () => {
                 return util.methodWithGas(
-                    PresalePool.methods.transferAllTokens(
+                    PresalePool.methods.transferTokensToAll(
                         TestToken.options.address
                     ),
                     creator
@@ -418,7 +418,7 @@ describe('Air Drop', () => {
             [0, 3, 0, 7, 0, 0].map(x => web3.utils.toWei(x, "ether")),
             () => {
                 return util.methodWithGas(
-                    PresalePool.methods.transferAllTokens(
+                    PresalePool.methods.transferTokensToAll(
                         TestToken.options.address
                     ),
                     creator
@@ -494,9 +494,12 @@ describe('Air Drop', () => {
             [feeTeamMember]
         );
 
+        await transferMoreTokensToPool(OtherTestToken, 11);
+
         let gasCosts = util.distributionGasCosts({
             numContributors: 2, numDrops: 1, gasPriceGwei: 5
         });
+        // not enough to cover gas costs
         await util.expectVMException(
             util.methodWithGas(
                 PresalePool.methods.airdropTokens(
@@ -508,6 +511,7 @@ describe('Air Drop', () => {
                 gasCosts*0.99
             )
         );
+        // way more than needed for gas costs
         await util.expectVMException(
             util.methodWithGas(
                 PresalePool.methods.airdropTokens(
@@ -532,15 +536,13 @@ describe('Air Drop', () => {
             )
         });
 
-        await transferMoreTokensToPool(OtherTestToken, 11);
-
         await util.expectBalanceChanges(
             web3,
             [buyer1, buyer2, buyer3, buyer4, buyer5, buyer6],
             [0, 3, 0, 7, 0, 0].map(x => web3.utils.toWei(x, "ether")),
             () => {
                 return util.methodWithGas(
-                    PresalePool.methods.transferAllTokens(
+                    PresalePool.methods.transferTokensToAll(
                         TestToken.options.address
                     ),
                     creator

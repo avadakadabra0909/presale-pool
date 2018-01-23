@@ -13,6 +13,7 @@ interface FeeManager {
     function discountFees(uint recipientFeesPerEther, uint teamFeesPerEther);
     function sendFees() payable returns(uint);
     function distributeFees(address contractAddress);
+    function getTotalFeesPerEther() returns(uint);
 }
 
 library PoolLib {
@@ -52,7 +53,6 @@ library PoolLib {
 
         FeeManager feeManager;
         uint totalFees;
-        uint feesPerEther;
 
         uint totalTokenDrops;
         address autoDistributionWallet;
@@ -87,19 +87,19 @@ library PoolLib {
     event ExpectingRefund(
         address _senderAddress
     );
-    event EtherAirdropRecieved(
+    event EtherAirdropReceived(
         address _senderAddress,
         uint _value,
         uint _autoDistributeGasPrice,
         address _autoDistributionWallet
     );
-    event TokenAirdropRecieved(
+    event TokenAirdropReceived(
         address _senderAddress,
         address _tokenAddress,
         uint _autoDistributeGasPrice,
         address _autoDistributionWallet
     );
-    event RefundRecieved(
+    event RefundReceived(
         address _senderAddress,
         uint _value
     );
@@ -182,34 +182,34 @@ library PoolLib {
         uint _totalTokenDrops,
         address _autoDistributionWallet
     ) {
-        AddAdmin(msg.sender);
         self.admins.push(msg.sender);
+        AddAdmin(msg.sender);
 
         self.feeManager = FeeManager(_feeManager);
-        self.feesPerEther = self.feeManager.create(_creatorFeesPerEther, msg.sender);
+        uint feesPerEther = self.feeManager.create(_creatorFeesPerEther, msg.sender);
         FeeInstalled(
-            self.feesPerEther,
+            feesPerEther,
             _creatorFeesPerEther,
             _feeManager
         );
 
+        self.totalTokenDrops = _totalTokenDrops;
+        self.autoDistributionWallet = _autoDistributionWallet;
         AutoDistributionConfigured(
             60e9,
             _totalTokenDrops,
             _autoDistributionWallet
         );
-        self.totalTokenDrops = _totalTokenDrops;
-        self.autoDistributionWallet = _autoDistributionWallet;
 
+        self.minContribution = _minContribution;
+        self.maxContribution = _maxContribution;
+        self.maxPoolBalance = _maxPoolBalance;
+        validatePoolSettings(self);
         ContributionSettingsChanged(
             _minContribution,
             _maxContribution,
             _maxPoolBalance
         );
-        self.minContribution = _minContribution;
-        self.maxContribution = _maxContribution;
-        self.maxPoolBalance = _maxPoolBalance;
-        validatePoolSettings(self);
 
         if (_restricted) {
             self.restricted = true;
@@ -256,27 +256,29 @@ library PoolLib {
     function refund(PoolStorage storage self) {
         onState(self, State.Refund);
         require(msg.sender == self.refundSenderAddress);
-        RefundRecieved(msg.sender, msg.value);
+        RefundReceived(msg.sender, msg.value);
     }
 
     function airdropEther(PoolStorage storage self, uint gasPrice, address autoDistributionWallet) {
+        require(msg.value > 0);
         canClaimTokens(self);
-        uint gasCosts = autoDistributionFees(gasPrice, self.totalContributors, 1);
-        EtherAirdropRecieved(msg.sender, msg.value - gasCosts, gasPrice, autoDistributionWallet);
+        uint gasCosts = calcDistributionFees(gasPrice, self.totalContributors, 1);
+        require(msg.value > gasCosts);
+        EtherAirdropReceived(msg.sender, msg.value - gasCosts, gasPrice, autoDistributionWallet);
         if (gasPrice > 0) {
-            require(msg.value > gasCosts);
-            transferAutoDistributionFees(gasCosts, autoDistributionWallet);
-        } else {
-            require(msg.value > 0);
+            autoDistributionWallet.transfer(gasCosts);
         }
     }
 
     function airdropTokens(PoolStorage storage self, address tokenAddress, uint gasPrice, address autoDistributionWallet) {
         canClaimTokens(self);
-        uint gasCosts = autoDistributionFees(gasPrice, self.totalContributors, 1);
+        ERC20 tokenContract = ERC20(tokenAddress);
+        require(tokenContract.balanceOf(address(this)) > 0);
+
+        uint gasCosts = calcDistributionFees(gasPrice, self.totalContributors, 1);
         require(msg.value >= gasCosts && msg.value <= 2*gasCosts);
-        TokenAirdropRecieved(msg.sender, tokenAddress, gasPrice, autoDistributionWallet);
-        transferAutoDistributionFees(msg.value, autoDistributionWallet);
+        TokenAirdropReceived(msg.sender, tokenAddress, gasPrice, autoDistributionWallet);
+        autoDistributionWallet.transfer(msg.value);
     }
 
     function fail(PoolStorage storage self) {
@@ -285,8 +287,8 @@ library PoolLib {
         changeState(self, State.Failed);
         self.poolRemainingBalance = this.balance - self.poolContributionBalance;
         if (self.totalTokenDrops > 0) {
-            uint gasCosts = autoDistributionFees(60e9, self.totalContributors, 1);
-            transferAutoDistributionFees(gasCosts, self.autoDistributionWallet);
+            uint gasCosts = calcDistributionFees(60e9, self.totalContributors, 1);
+            self.autoDistributionWallet.transfer(gasCosts);
         }
     }
 
@@ -307,24 +309,36 @@ library PoolLib {
     function discountFees(PoolStorage storage self, uint recipientFeesPerEther, uint teamFeesPerEther) {
         onState(self, State.Open);
         require(msg.sender == tx.origin);
-        require(self.feesPerEther >= (recipientFeesPerEther + teamFeesPerEther));
-        self.feesPerEther = recipientFeesPerEther + teamFeesPerEther;
+        // Ensure fees are only decreased and not increased
+        require(
+            self.feeManager.getTotalFeesPerEther() >= (recipientFeesPerEther + teamFeesPerEther)
+        );
+        FeeInstalled(
+            recipientFeesPerEther + teamFeesPerEther,
+            recipientFeesPerEther,
+            address(self.feeManager)
+        );
         self.feeManager.discountFees(recipientFeesPerEther, teamFeesPerEther);
     }
 
+    // Allow admin to send the pool contributions to a wallet or contract (minus fees and auto distrib gas cost)
     function payToPresale(PoolStorage storage self, address _presaleAddress, uint minPoolBalance, uint gasLimit, bytes data) {
         onlyAdmins(self);
         onState(self, State.Open);
-        require(self.poolContributionBalance >= minPoolBalance);
         require(self.poolContributionBalance > 0);
-        changeState(self, State.Paid);
+        require(self.poolContributionBalance >= minPoolBalance);
         assert(this.balance >= self.poolContributionBalance);
 
-        self.totalFees = (self.poolContributionBalance * self.feesPerEther) / 1 ether;
+        changeState(self, State.Paid);
+
+        uint feesPerEther = self.feeManager.getTotalFeesPerEther();
+        self.totalFees = (self.poolContributionBalance * feesPerEther) / 1 ether;
         self.poolRemainingBalance = this.balance - self.poolContributionBalance;
 
-        uint gasCosts = autoDistributionFees(60e9, self.totalContributors, self.totalTokenDrops);
-        transferAutoDistributionFees(gasCosts, self.autoDistributionWallet);
+        uint gasCosts = calcDistributionFees(60e9, self.totalContributors, self.totalTokenDrops);
+        if (gasCosts > 0) {
+            self.autoDistributionWallet.transfer(gasCosts);
+        }
         require(
             _presaleAddress.call.gas(
                 (gasLimit > 0) ? gasLimit : msg.gas
@@ -466,7 +480,8 @@ library PoolLib {
         );
     }
 
-    function transferAllTokens(PoolStorage storage self, address tokenAddress) {
+    // Transfer tokens for all contributors, but can exceed block gas limit
+    function transferTokensToAll(PoolStorage storage self, address tokenAddress) {
         canClaimTokens(self);
         uint tokenBalance = ERC20(tokenAddress).balanceOf(address(this));
 
@@ -664,6 +679,7 @@ library PoolLib {
             return;
         }
 
+        // Events
         Withdrawal(
             recipient,
             total,
@@ -671,13 +687,15 @@ library PoolLib {
             balance.contribution,
             self.poolContributionBalance
         );
-
-        self.poolRemainingBalance -= total;
-        total += share;
         RefundClaimed(recipient, share);
 
+        // Remove only if there is something remaining
+        if(total > 0) {
+          self.poolRemainingBalance -= total;
+          balance.remaining = 0;
+        }
+        total += share;
 
-        balance.remaining = 0;
         require(
             recipient.call.value(total)()
         );
@@ -729,22 +747,20 @@ library PoolLib {
         return tokenBalance;
     }
 
-    function transferAutoDistributionFees(uint gasCosts, address autoDistributionWallet) {
-        if (gasCosts > 0) {
-            autoDistributionWallet.transfer(gasCosts);
-        }
-    }
-
-    function autoDistributionFees(uint gasPrice, uint numContributors, uint transfersPerContributor) returns(uint) {
+    // Calculate the fees (ie gas cost) required for distribution
+    function calcDistributionFees(uint gasPrice, uint numContributors, uint transfersPerContributor) returns(uint) {
         return gasPrice * numContributors * transfersPerContributor * 150000;
     }
 
     function validatePoolSettings(PoolStorage storage self) constant {
         require(
-            self.totalTokenDrops <= 10 && self.minContribution <= self.maxContribution && self.maxContribution <= self.maxPoolBalance && self.maxPoolBalance <= 1e9 ether
+            self.totalTokenDrops <= 10 &&
+            self.minContribution <= self.maxContribution &&
+            self.maxContribution <= self.maxPoolBalance &&
+            self.maxPoolBalance <= 1e9 ether
         );
 
-        uint gasCosts = autoDistributionFees(60e9, 1, self.totalTokenDrops);
+        uint gasCosts = calcDistributionFees(60e9, 1, self.totalTokenDrops);
         require(self.minContribution >= 2 * gasCosts);
     }
 

@@ -303,7 +303,7 @@ describe('confirmTokens', () => {
     it("tokens cant be claimed in open state", async () => {
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.transferAllTokens(
+                PresalePool.methods.transferTokensToAll(
                     TestToken.options.address
                 ),
                 creator
@@ -323,7 +323,7 @@ describe('confirmTokens', () => {
         await util.methodWithGas(PresalePool.methods.fail(), creator);
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.transferAllTokens(
+                PresalePool.methods.transferTokensToAll(
                     TestToken.options.address
                 ),
                 creator
@@ -357,7 +357,7 @@ describe('confirmTokens', () => {
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.transferAllTokens(
+                PresalePool.methods.transferTokensToAll(
                     TestToken.options.address
                 ),
                 creator
@@ -438,7 +438,7 @@ describe('confirmTokens', () => {
             ).to.equal(amount);
         }
 
-        it("transferAllTokens()", async () => {
+        it("transferTokensToAll()", async () => {
             await setUpPaidPoolWithTokens();
 
             // calling multiple consecutive times doesn't give you more tokens
@@ -448,7 +448,7 @@ describe('confirmTokens', () => {
                 [0, 4, 1].map(x => web3.utils.toWei(x, "ether")),
                 () => {
                         return util.methodWithGas(
-                            PresalePool.methods.transferAllTokens(
+                            PresalePool.methods.transferTokensToAll(
                                 TestToken.options.address
                             ),
                             creator
@@ -457,7 +457,7 @@ describe('confirmTokens', () => {
             );
             await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
                 return util.methodWithGas(
-                    PresalePool.methods.transferAllTokens(TestToken.options.address),
+                    PresalePool.methods.transferTokensToAll(TestToken.options.address),
                     creator
                 );
             });
@@ -470,7 +470,7 @@ describe('confirmTokens', () => {
 
             await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
                 return util.methodWithGas(
-                    PresalePool.methods.transferAllTokens(TestToken.options.address),
+                    PresalePool.methods.transferTokensToAll(TestToken.options.address),
                     creator
                 );
             });
@@ -630,7 +630,7 @@ describe('confirmTokens', () => {
             await tokenBalanceEquals(creator, 0);
 
             await util.methodWithGas(
-                PresalePool.methods.transferAllTokens(
+                PresalePool.methods.transferTokensToAll(
                     TestToken.options.address
                 ),
                 creator

@@ -139,6 +139,11 @@ contract PBFeeManager {
         return recipientFeesPerEther + teamFeesPerEther;
     }
 
+    function getTotalFeesPerEther() external returns(uint) {
+        Fees storage fees = feesForContract[msg.sender];
+        return fees.recipientFraction[1];
+    }
+
     function discountFees(uint recipientFeesPerEther, uint teamFeesPerEther) external {
         require(Util.contains(teamMembers, tx.origin));
         Fees storage fees = feesForContract[msg.sender];
