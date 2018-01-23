@@ -31,8 +31,8 @@ describe('deploy', () => {
             creator,
             [
                 [feeTeamMember],
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, "0.005", "ether"),
+                util.toWei(web3, "0.01", "ether")
             ]
         );
     });
@@ -42,7 +42,7 @@ describe('deploy', () => {
     });
 
     it('can be deployed with multiple admins', async () => {
-        let admins = [addresses[1].toLowerCase(), addresses[2].toLowerCase()]
+        let admins = [addresses[1].toLowerCase(), addresses[2].toLowerCase()];
         let nonAdmin = addresses[3].toLowerCase();
         let PresalePool = await util.deployContract(
             web3,
@@ -52,8 +52,8 @@ describe('deploy', () => {
                 feeManager: PBFeeManager.options.address,
                 admins: admins,
                 minContribution: 0,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether"),
+                maxContribution: util.toWei(web3, "50", "ether"),
+                maxPoolBalance: util.toWei(web3, "50", "ether"),
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -83,8 +83,8 @@ describe('deploy', () => {
                 admins: admins,
                 restricted: true,
                 minContribution: 0,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether"),
+                maxContribution: util.toWei(web3, "50", "ether"),
+                maxPoolBalance: util.toWei(web3, "50", "ether"),
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -94,7 +94,7 @@ describe('deploy', () => {
             util.methodWithGas(
                 PresalePool.methods.deposit(),
                 buyer1,
-                web3.utils.toWei(3, "ether")
+                util.toWei(web3, "3", "ether")
             )
         );
 
@@ -103,7 +103,7 @@ describe('deploy', () => {
             await util.methodWithGas(
                 PresalePool.methods.deposit(),
                 admins[i],
-                web3.utils.toWei(3, "ether")
+                util.toWei(web3, "3", "ether")
             );
         }
     });
@@ -116,8 +116,8 @@ describe('deploy', () => {
             util.createPoolArgs({
                 feeManager: PBFeeManager.options.address,
                 minContribution: 0,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether"),
+                maxContribution: util.toWei(web3, "50", "ether"),
+                maxPoolBalance: util.toWei(web3, "50", "ether"),
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -125,7 +125,7 @@ describe('deploy', () => {
         let poolBalance = await web3.eth.getBalance(
             PresalePool.options.address
         );
-        expect(poolBalance).to.equal(web3.utils.toWei(0, "ether"));
+        expect(poolBalance).to.equal(util.toWei(web3, "0", "ether"));
         expect(await util.getBalances(PresalePool)).to.deep.equal({});
     });
 
@@ -137,10 +137,10 @@ describe('deploy', () => {
                 util.createPoolArgs({
                     feeManager: PBFeeManager.options.address,
                     minContribution: 0,
-                    maxContribution: web3.utils.toWei(50, "ether"),
-                    maxPoolBalance: web3.utils.toWei(50, "ether"),
+                    maxContribution: util.toWei(web3, "50", "ether"),
+                    maxPoolBalance: util.toWei(web3, "50", "ether"),
                 }),
-                web3.utils.toWei(5, "ether"),
+                util.toWei(web3, 5, "ether"),
                 { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
             )
         );

@@ -12,6 +12,8 @@ describe('Chaining pools', () => {
     let buyer1;
     let buyer2;
     let buyer3;
+	let buyer4;
+	let buyer5;
     let gasFeeRecipient;
     let web3;
     let PBFeeManager;
@@ -44,8 +46,8 @@ describe('Chaining pools', () => {
             creator,
             [
                 [feeTeamMember],
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
     });
@@ -58,10 +60,10 @@ describe('Chaining pools', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                minContribution: web3.utils.toWei(1, "ether"),
+                minContribution: util.toWei(web3, 1, "ether"),
                 feeManager: PBFeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether"),
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether"),
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -72,10 +74,10 @@ describe('Chaining pools', () => {
             "PresalePool",
             otherCreator,
             util.createPoolArgs({
-                minContribution: web3.utils.toWei(1, "ether"),
+                minContribution: util.toWei(web3, 1, "ether"),
                 feeManager: PBFeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether"),
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether"),
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -91,29 +93,29 @@ describe('Chaining pools', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer1,
-            web3.utils.toWei(5, "ether")
+            util.toWei(web3, 5, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer2,
-            web3.utils.toWei(2.5, "ether")
+            util.toWei(web3, 2.5, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer3,
-            web3.utils.toWei(10, "ether")
+            util.toWei(web3, 10, "ether")
         );
 
 
         await util.methodWithGas(
             OtherPool.methods.deposit(),
             buyer4,
-            web3.utils.toWei(1, "ether")
+            util.toWei(web3, 1, "ether")
         );
         await util.methodWithGas(
             OtherPool.methods.deposit(),
             buyer5,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
 
         let depositBytecode = PresalePool.methods.deposit().encodeABI();
@@ -125,24 +127,24 @@ describe('Chaining pools', () => {
             otherCreator
         );
 
-        let expectedBalances = {}
+        let expectedBalances = {};
         expectedBalances[buyer1] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(5, "ether"),
-        }
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 5, "ether"),
+        };
         expectedBalances[buyer2] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(2.5, "ether"),
-        }
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 2.5, "ether"),
+        };
         expectedBalances[buyer3] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(10, "ether"),
-        }
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 10, "ether"),
+        };
         expectedBalances[OtherPool.options.address.toLowerCase()] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(3*0.995, "ether"),
-        }
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(3*0.995 +17.5, "ether"));
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 3*0.995, "ether"),
+        };
+        await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 3*0.995 +17.5, "ether"));
     });
 
 
@@ -231,7 +233,7 @@ describe('Chaining pools', () => {
         await util.expectBalanceChanges(
             web3,
             [buyer4, buyer5],
-            [1, 2].map(x => web3.utils.toWei(x, "ether")),
+            [1, 2].map(x => util.toWei(web3, x, "ether")),
             () => {
                 return util.methodWithGas(
                     OtherPool.methods.withdrawAllForMany([

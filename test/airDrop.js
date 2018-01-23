@@ -10,7 +10,10 @@ describe('Air Drop', () => {
     let addresses;
     let buyer1;
     let buyer2;
-    let buyer3;
+	let buyer3;
+	let buyer4;
+	let buyer5;
+	let buyer6;
     let gasFeeRecipient;
     let web3;
     let PBFeeManager;
@@ -44,8 +47,8 @@ describe('Air Drop', () => {
             creator,
             [
                 [feeTeamMember],
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
     });
@@ -57,10 +60,10 @@ describe('Air Drop', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                minContribution: web3.utils.toWei(1, "ether"),
+                minContribution: util.toWei(web3, 1, "ether"),
                 feeManager: PBFeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -76,102 +79,102 @@ describe('Air Drop', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer1,
-            web3.utils.toWei(5, "ether")
+            util.toWei(web3, 5, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer2,
-            web3.utils.toWei(3, "ether")
+            util.toWei(web3, 3, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer3,
-            web3.utils.toWei(6, "ether")
+            util.toWei(web3, 6, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer4,
-            web3.utils.toWei(7, "ether")
+            util.toWei(web3, 7, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer5,
-            web3.utils.toWei(8, "ether")
+            util.toWei(web3, 8, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer6,
-            web3.utils.toWei(9, "ether")
+            util.toWei(web3, 9, "ether")
         );
 
-        let expectedBalances = {}
+        let expectedBalances = {};
         expectedBalances[buyer1] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(5, "ether"),
-        }
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 5, "ether"),
+        };
         expectedBalances[buyer2] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(3, "ether"),
-        }
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 3, "ether"),
+        };
         expectedBalances[buyer3] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(6, "ether"),
-        }
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 6, "ether"),
+        };
         expectedBalances[buyer4] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(7, "ether"),
-        }
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 7, "ether"),
+        };
         expectedBalances[buyer5] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(8, "ether"),
-        }
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 8, "ether"),
+        };
         expectedBalances[buyer6] = {
-            remaining: web3.utils.toWei(0, "ether"),
-            contribution: web3.utils.toWei(9, "ether"),
-        }
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(38, "ether"));
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 9, "ether"),
+        };
+        await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 38, "ether"));
 
         await util.methodWithGas(
             PresalePool.methods.modifyWhitelist([], [buyer2, buyer4]),
             creator
         );
-        expectedBalances[buyer2].whitelisted = false
-        expectedBalances[buyer2].contribution = web3.utils.toWei(0, "ether")
-        expectedBalances[buyer2].remaining = web3.utils.toWei(3, "ether")
-        expectedBalances[buyer4].whitelisted = false
-        expectedBalances[buyer4].contribution = web3.utils.toWei(0, "ether")
-        expectedBalances[buyer4].remaining = web3.utils.toWei(7, "ether")
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(38, "ether"));
+        expectedBalances[buyer2].whitelisted = false;
+        expectedBalances[buyer2].contribution = util.toWei(web3, 0, "ether");
+        expectedBalances[buyer2].remaining = util.toWei(web3, 3, "ether");
+        expectedBalances[buyer4].whitelisted = false;
+        expectedBalances[buyer4].contribution = util.toWei(web3, 0, "ether");
+        expectedBalances[buyer4].remaining = util.toWei(web3, 7, "ether");
+        await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 38, "ether"));
 
         await util.methodWithGas(
             PresalePool.methods.setContributionSettings(
-                web3.utils.toWei(5, "ether"),
-                web3.utils.toWei(50, "ether"),
-                web3.utils.toWei(50, "ether"),
+                util.toWei(web3, 5, "ether"),
+                util.toWei(web3, 50, "ether"),
+                util.toWei(web3, 50, "ether"),
                 []
             ),
             creator
         );
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(38, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 38, "ether"));
 
         await util.methodWithGas(
             PresalePool.methods.modifyWhitelist([buyer2], []),
             creator
         );
         expectedBalances[buyer2].whitelisted = true;
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(38, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 38, "ether"));
 
-        expectedBalances[buyer5].contribution = '0'
-        expectedBalances[buyer6].contribution = '0'
+        expectedBalances[buyer5].contribution = '0';
+        expectedBalances[buyer6].contribution = '0';
         await util.methodWithGas(
             PresalePool.methods.withdrawAll(),
             buyer5
         );
         await util.methodWithGas(
-            PresalePool.methods.withdraw(web3.utils.toWei(9, "ether")),
+            PresalePool.methods.withdraw(util.toWei(web3, 9, "ether")),
             buyer6
         );
-        await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(21, "ether"));
+        await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 21, "ether"));
     });
 
 
@@ -187,7 +190,7 @@ describe('Air Drop', () => {
                     gasFeeRecipient
                 ),
                 creator,
-                web3.utils.toWei(11, "ether")
+                util.toWei(web3, 11, "ether")
             )
         );
 
@@ -216,7 +219,7 @@ describe('Air Drop', () => {
                     gasFeeRecipient
                 ),
                 creator,
-                web3.utils.toWei(11, "ether")
+                util.toWei(web3, 11, "ether")
             )
         );
 
@@ -248,7 +251,7 @@ describe('Air Drop', () => {
                     gasFeeRecipient
                 ),
                 creator,
-                web3.utils.toWei(11, "ether")
+                util.toWei(web3, 11, "ether")
             )
         );
 
@@ -285,7 +288,7 @@ describe('Air Drop', () => {
                     gasFeeRecipient
                 ),
                 creator,
-                web3.utils.toWei(11, "ether")
+                util.toWei(web3, 11, "ether")
             )
         );
 
@@ -321,7 +324,7 @@ describe('Air Drop', () => {
         await util.expectVMException(
             util.methodWithGas(
                 PresalePool.methods.airdropEther(
-                    web3.utils.toWei(5, "gwei"),
+                    util.toWei(web3, 5, "gwei"),
                     gasFeeRecipient
                 ),
                 buyer6,
@@ -332,18 +335,19 @@ describe('Air Drop', () => {
         await util.expectBalanceChange(web3, gasFeeRecipient, gasCosts, () => {
             return util.methodWithGas(
                 PresalePool.methods.airdropEther(
-                    web3.utils.toWei(5, "gwei"),
+                    util.toWei(web3, 5, "gwei"),
                     gasFeeRecipient
                 ),
                 buyer6,
-                gasCosts + parseInt(web3.utils.toWei(11, "ether"))
+                gasCosts + parseInt(util.toWei(web3, 11, "ether"))
             )
         });
 
+        let test = [0, 3, 0, 7, 0, 0].map(x => util.toWei(web3, x, "ether"));
         await util.expectBalanceChanges(
             web3,
             [buyer1, buyer2, buyer3, buyer4, buyer5, buyer6],
-            [0, 3, 0, 7, 0, 0].map(x => web3.utils.toWei(x, "ether")),
+            [0, 3, 0, 7, 0, 0].map(x => util.toWei(web3, x, "ether")),
             () => {
                 return util.methodWithGas(
                     PresalePool.methods.transferTokensToAll(
@@ -357,7 +361,7 @@ describe('Air Drop', () => {
         await util.expectBalanceChanges(
             web3,
             [buyer1, buyer2, buyer3, buyer4, buyer5, buyer6],
-            [5, 0, 6, 0, 0, 0].map(x => web3.utils.toWei(x, "ether")),
+            [5, 0, 6, 0, 0, 0].map(x => util.toWei(web3, x, "ether")),
             () => {
                 return util.methodWithGas(
                     PresalePool.methods.withdrawAllForMany([
@@ -404,18 +408,18 @@ describe('Air Drop', () => {
         await util.expectBalanceChange(web3, gasFeeRecipient, 0, () => {
             return util.methodWithGas(
                 PresalePool.methods.airdropEther(
-                    web3.utils.toWei(5, "gwei"),
+                    util.toWei(web3, 5, "gwei"),
                     gasFeeRecipient
                 ),
                 creator,
-                web3.utils.toWei(11, "ether")
+                util.toWei(web3, 11, "ether")
             )
         });
 
         await util.expectBalanceChanges(
             web3,
             [buyer1, buyer2, buyer3, buyer4, buyer5, buyer6],
-            [0, 3, 0, 7, 0, 0].map(x => web3.utils.toWei(x, "ether")),
+            [0, 3, 0, 7, 0, 0].map(x => util.toWei(web3, x, "ether")),
             () => {
                 return util.methodWithGas(
                     PresalePool.methods.transferTokensToAll(
@@ -429,7 +433,7 @@ describe('Air Drop', () => {
         await util.expectBalanceChanges(
             web3,
             [buyer1, buyer2, buyer3, buyer4, buyer5, buyer6],
-            [5, 0, 6, 0, 0, 0].map(x => web3.utils.toWei(x, "ether")),
+            [5, 0, 6, 0, 0, 0].map(x => util.toWei(web3, x, "ether")),
             () => {
                 return util.methodWithGas(
                     PresalePool.methods.withdrawAllForMany([
@@ -452,7 +456,7 @@ describe('Air Drop', () => {
         await web3.eth.sendTransaction({
             from: creator,
             to: TokenContract.options.address,
-            value: web3.utils.toWei(.1, "ether")
+            value: util.toWei(web3, .1, "ether")
         });
 
         await util.methodWithGas(
@@ -504,7 +508,7 @@ describe('Air Drop', () => {
             util.methodWithGas(
                 PresalePool.methods.airdropTokens(
                     OtherTestToken.options.address,
-                    web3.utils.toWei(5, "gwei"),
+                    util.toWei(web3, 5, "gwei"),
                     gasFeeRecipient
                 ),
                 buyer6,
@@ -516,7 +520,7 @@ describe('Air Drop', () => {
             util.methodWithGas(
                 PresalePool.methods.airdropTokens(
                     OtherTestToken.options.address,
-                    web3.utils.toWei(5, "gwei"),
+                    util.toWei(web3, 5, "gwei"),
                     gasFeeRecipient
                 ),
                 buyer6,
@@ -528,7 +532,7 @@ describe('Air Drop', () => {
             return util.methodWithGas(
                 PresalePool.methods.airdropTokens(
                     OtherTestToken.options.address,
-                    web3.utils.toWei(5, "gwei"),
+                    util.toWei(web3, 5, "gwei"),
                     gasFeeRecipient
                 ),
                 buyer6,
@@ -539,7 +543,7 @@ describe('Air Drop', () => {
         await util.expectBalanceChanges(
             web3,
             [buyer1, buyer2, buyer3, buyer4, buyer5, buyer6],
-            [0, 3, 0, 7, 0, 0].map(x => web3.utils.toWei(x, "ether")),
+            [0, 3, 0, 7, 0, 0].map(x => util.toWei(web3, x, "ether")),
             () => {
                 return util.methodWithGas(
                     PresalePool.methods.transferTokensToAll(
@@ -561,7 +565,7 @@ describe('Air Drop', () => {
         await util.expectBalanceChanges(
             web3,
             [buyer1, buyer2, buyer3, buyer4, buyer5, buyer6],
-            [0, 0, 0, 0, 0, 0].map(x => web3.utils.toWei(x, "ether")),
+            [0, 0, 0, 0, 0, 0].map(x => util.toWei(web3, x, "ether")),
             () => {
                 return util.methodWithGas(
                     PresalePool.methods.withdrawAllForMany([

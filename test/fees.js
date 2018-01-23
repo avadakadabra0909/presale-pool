@@ -37,8 +37,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -47,10 +47,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.46, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.46, "ether"),
                 feeManager: PBFeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -62,10 +62,10 @@ describe('fees', () => {
                 "PresalePool",
                 creator,
                 util.createPoolArgs({
-                    creatorFeesPerEther: web3.utils.toWei(0.5, "ether"),
+                    creatorFeesPerEther: util.toWei(web3, 0.5, "ether"),
                     feeManager: PBFeeManager.options.address,
-                    maxContribution: web3.utils.toWei(50, "ether"),
-                    maxPoolBalance: web3.utils.toWei(50, "ether")
+                    maxContribution: util.toWei(web3, 50, "ether"),
+                    maxPoolBalance: util.toWei(web3, 50, "ether")
                 }),
                 0,
                 { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -80,10 +80,10 @@ describe('fees', () => {
                 "PresalePool",
                 creator,
                 util.createPoolArgs({
-                    feesPerEther: web3.utils.toWei(0.49, "ether"),
+                    feesPerEther: util.toWei(web3, 0.49, "ether"),
                     feeManager: addresses[1].toLowerCase(),
-                    maxContribution: web3.utils.toWei(50, "ether"),
-                    maxPoolBalance: web3.utils.toWei(50, "ether")
+                    maxContribution: util.toWei(web3, 50, "ether"),
+                    maxPoolBalance: util.toWei(web3, 50, "ether")
                 }),
                 0,
                 { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -98,8 +98,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -108,10 +108,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.2, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.2, "ether"),
                 feeManager: FeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -120,7 +120,7 @@ describe('fees', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
 
         await util.expectVMException(
@@ -169,8 +169,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -179,10 +179,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.2, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.2, "ether"),
                 feeManager: FeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -191,7 +191,7 @@ describe('fees', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
         let payoutAddress = addresses[5];
         await util.methodWithGas(
@@ -221,7 +221,7 @@ describe('fees', () => {
         await web3.eth.sendTransaction({
             from: payoutAddress,
             to: PresalePool.options.address,
-            value: web3.utils.toWei(101, "ether")
+            value: util.toWei(web3, 101, "ether")
         });
 
         await util.expectVMException(
@@ -245,8 +245,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -262,10 +262,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.02, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.02, "ether"),
                 feeManager: FeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -312,8 +312,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -322,10 +322,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.02, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.02, "ether"),
                 feeManager: FeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -334,41 +334,41 @@ describe('fees', () => {
         let fees = await FeeManager.methods.getTotalFeesPerEther().call({
             from: PresalePool.options.address
         });
-        expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
+        expect(fees).to.be.equal(util.toWei(web3, 0.03, "ether"));
 
         await util.methodWithGas(
-            PresalePool.methods.discountFees(web3.utils.toWei(0.02, "ether"), web3.utils.toWei(0.01, "ether")),
+            PresalePool.methods.discountFees(util.toWei(web3, 0.02, "ether"), util.toWei(web3, 0.01, "ether")),
             team[0]
         );
         fees = await FeeManager.methods.getTotalFeesPerEther().call({
             from: PresalePool.options.address
         });
-        expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
+        expect(fees).to.be.equal(util.toWei(web3, 0.03, "ether"));
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.discountFees(web3.utils.toWei(0.021, "ether"), web3.utils.toWei(0.01, "ether")),
+                PresalePool.methods.discountFees(util.toWei(web3, 0.021, "ether"), util.toWei(web3, 0.01, "ether")),
                 team[0]
             )
         );
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.discountFees(web3.utils.toWei(0.020, "ether"), web3.utils.toWei(0.011, "ether")),
+                PresalePool.methods.discountFees(util.toWei(web3, 0.020, "ether"), util.toWei(web3, 0.011, "ether")),
                 team[0]
             )
         );
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.discountFees(web3.utils.toWei(0.31, "ether"), 0),
+                PresalePool.methods.discountFees(util.toWei(web3, 0.31, "ether"), 0),
                 team[0]
             )
         );
 
         await util.expectVMException(
             util.methodWithGas(
-                PresalePool.methods.discountFees(0, web3.utils.toWei(0.31, "ether")),
+                PresalePool.methods.discountFees(0, util.toWei(web3, 0.31, "ether")),
                 team[0]
             )
         );
@@ -381,8 +381,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -391,10 +391,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.02, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.02, "ether"),
                 feeManager: FeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -403,7 +403,7 @@ describe('fees', () => {
         let fees = await FeeManager.methods.getTotalFeesPerEther().call({
             from: PresalePool.options.address
         });
-        expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
+        expect(fees).to.be.equal(util.toWei(web3, 0.03, "ether"));
 
         await util.methodWithGas(
             PresalePool.methods.discountFees(0, 0),
@@ -418,11 +418,11 @@ describe('fees', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(4, "ether")
+            util.toWei(web3, 4, "ether")
         );
 
         let payoutAddress = addresses[4];
-        await util.expectBalanceChange(web3, payoutAddress, web3.utils.toWei(4, "ether"), () =>{
+        await util.expectBalanceChange(web3, payoutAddress, util.toWei(web3, 4, "ether"), () =>{
             return util.methodWithGas(
                 PresalePool.methods.payToPresale(payoutAddress, 0, 0, '0x'),
                 creator
@@ -437,8 +437,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -447,10 +447,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.02, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.02, "ether"),
                 feeManager: FeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -459,11 +459,11 @@ describe('fees', () => {
         let fees = await FeeManager.methods.getTotalFeesPerEther().call({
             from: PresalePool.options.address
         });
-        expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
+        expect(fees).to.be.equal(util.toWei(web3, 0.03, "ether"));
 
         await util.methodWithGas(
             PresalePool.methods.discountFees(
-                web3.utils.toWei(0.02, "ether"),
+                util.toWei(web3, 0.02, "ether"),
                 0
             ),
             team[0]
@@ -471,13 +471,13 @@ describe('fees', () => {
         fees = await FeeManager.methods.getTotalFeesPerEther().call({
             from: PresalePool.options.address
         });
-        expect(fees).to.be.equal(web3.utils.toWei(0.02, "ether"));
+        expect(fees).to.be.equal(util.toWei(web3, 0.02, "ether"));
 
         let buyer1 = addresses[3];
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(10, "ether")
+            util.toWei(web3, 10, "ether")
         );
 
         let TestToken = await util.deployContract(
@@ -487,7 +487,7 @@ describe('fees', () => {
             [addresses[2]]
         );
 
-        await util.expectBalanceChange(web3, TestToken.options.address, web3.utils.toWei(10*0.98, "ether"), () =>{
+        await util.expectBalanceChange(web3, TestToken.options.address, util.toWei(web3, 10*0.98, "ether"), () =>{
             return util.methodWithGas(
                 PresalePool.methods.payToPresale(TestToken.options.address, 0, 0, '0x'),
                 creator
@@ -497,7 +497,7 @@ describe('fees', () => {
         await util.expectBalanceChanges(
             web3,
             [team[0], creator],
-            [0, 10*0.02].map(x => web3.utils.toWei(x, "ether")), async () => {
+            [0, 10*0.02].map(x => util.toWei(web3, x, "ether")), async () => {
                 await util.methodWithGas(
                     PresalePool.methods.confirmTokens(TestToken.options.address, true),
                     creator
@@ -517,8 +517,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -527,10 +527,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.02, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.02, "ether"),
                 feeManager: FeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -539,25 +539,25 @@ describe('fees', () => {
         let fees = await FeeManager.methods.getTotalFeesPerEther().call({
             from: PresalePool.options.address
         });
-        expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
+        expect(fees).to.be.equal(util.toWei(web3, 0.03, "ether"));
 
         await util.methodWithGas(
             PresalePool.methods.discountFees(
                 0,
-                web3.utils.toWei(0.02, "ether")
+                util.toWei(web3, 0.02, "ether")
             ),
             team[0]
         );
         fees = await FeeManager.methods.getTotalFeesPerEther().call({
             from: PresalePool.options.address
         });
-        expect(fees).to.be.equal(web3.utils.toWei(0.02, "ether"));
+        expect(fees).to.be.equal(util.toWei(web3, 0.02, "ether"));
 
         let buyer1 = addresses[3];
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(10, "ether")
+            util.toWei(web3, 10, "ether")
         );
 
         let TestToken = await util.deployContract(
@@ -567,7 +567,7 @@ describe('fees', () => {
             [addresses[2]]
         );
 
-        await util.expectBalanceChange(web3, TestToken.options.address, web3.utils.toWei(10*0.98, "ether"), () =>{
+        await util.expectBalanceChange(web3, TestToken.options.address, util.toWei(web3, 10*0.98, "ether"), () =>{
             return util.methodWithGas(
                 PresalePool.methods.payToPresale(TestToken.options.address, 0, 0, '0x'),
                 creator
@@ -577,7 +577,7 @@ describe('fees', () => {
         await util.expectBalanceChanges(
             web3,
             [team[0], creator],
-            [10*0.02, 0].map(x => web3.utils.toWei(x, "ether")), async () => {
+            [10*0.02, 0].map(x => util.toWei(web3, x, "ether")), async () => {
                 await util.methodWithGas(
                     PresalePool.methods.confirmTokens(TestToken.options.address, true),
                     creator
@@ -597,8 +597,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -607,10 +607,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.02, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.02, "ether"),
                 feeManager: FeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -619,25 +619,25 @@ describe('fees', () => {
         let fees = await FeeManager.methods.getTotalFeesPerEther().call({
             from: PresalePool.options.address
         });
-        expect(fees).to.be.equal(web3.utils.toWei(0.03, "ether"));
+        expect(fees).to.be.equal(util.toWei(web3, 0.03, "ether"));
 
         await util.methodWithGas(
             PresalePool.methods.discountFees(
-                web3.utils.toWei(0.01, "ether"),
-                web3.utils.toWei(0.015, "ether")
+                util.toWei(web3, 0.01, "ether"),
+                util.toWei(web3, 0.015, "ether")
             ),
             team[0]
         );
         fees = await FeeManager.methods.getTotalFeesPerEther().call({
             from: PresalePool.options.address
         });
-        expect(fees).to.be.equal(web3.utils.toWei(0.025, "ether"));
+        expect(fees).to.be.equal(util.toWei(web3, 0.025, "ether"));
 
         let buyer1 = addresses[6];
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(20, "ether")
+            util.toWei(web3, 20, "ether")
         );
 
         let TestToken = await util.deployContract(
@@ -647,7 +647,7 @@ describe('fees', () => {
             [addresses[2]]
         );
 
-        await util.expectBalanceChange(web3, TestToken.options.address, web3.utils.toWei(20*0.975, "ether"), () =>{
+        await util.expectBalanceChange(web3, TestToken.options.address, util.toWei(web3, 20*0.975, "ether"), () =>{
             return util.methodWithGas(
                 PresalePool.methods.payToPresale(TestToken.options.address, 0, 0, '0x'),
                 creator
@@ -657,7 +657,7 @@ describe('fees', () => {
         await util.expectBalanceChanges(
             web3,
             [team[0], creator],
-            [20*0.015, 20*0.01].map(x => web3.utils.toWei(x, "ether")), async () => {
+            [20*0.015, 20*0.01].map(x => util.toWei(web3, x, "ether")), async () => {
                 await util.methodWithGas(
                     PresalePool.methods.confirmTokens(TestToken.options.address, true),
                     creator
@@ -677,8 +677,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -687,10 +687,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.02, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.02, "ether"),
                 feeManager: FeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -705,7 +705,7 @@ describe('fees', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.payToPresale(TestToken.options.address, 0, 0, '0x'),
@@ -717,7 +717,7 @@ describe('fees', () => {
             creator
         );
 
-        let expectedPayout = web3.utils.toWei(2*.03, "ether");
+        let expectedPayout = util.toWei(web3, 2*.03, "ether");
         let beforeBalance = await web3.eth.getBalance(FeeManager.options.address);
 
         await util.methodWithGas(
@@ -750,8 +750,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -760,10 +760,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.02, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.02, "ether"),
                 feeManager: FeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -779,12 +779,12 @@ describe('fees', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(4, "ether")
+            util.toWei(web3, 4, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer1,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.payToPresale(TestToken.options.address, 0, 0, '0x'),
@@ -795,7 +795,7 @@ describe('fees', () => {
             creator
         );
 
-        let expectedPayout = web3.utils.toWei(6*0.02, "ether");
+        let expectedPayout = util.toWei(web3, 6*0.02, "ether");
         let beforeBalance = await web3.eth.getBalance(creator);
 
         await util.methodWithGas(
@@ -837,8 +837,8 @@ describe('fees', () => {
             creator,
             [
                 team,
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
 
@@ -848,10 +848,10 @@ describe('fees', () => {
             "PresalePool",
             creator,
             util.createPoolArgs({
-                creatorFeesPerEther: web3.utils.toWei(0.02, "ether"),
+                creatorFeesPerEther: util.toWei(web3, 0.02, "ether"),
                 feeManager: FeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether"),
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether"),
                 admins: [otherAdmin]
             }),
             0,
@@ -868,19 +868,19 @@ describe('fees', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(8, "ether")
+            util.toWei(web3, 8, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             buyer1,
-            web3.utils.toWei(4, "ether")
+            util.toWei(web3, 4, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.payToPresale(TestToken.options.address, 0, 0, '0x'),
             creator
         );
 
-        let expectedPayout = web3.utils.toWei(12*0.02, "ether");
+        let expectedPayout = util.toWei(web3, 12*0.02, "ether");
         await util.expectBalanceChanges(
             web3,
             [creator, otherAdmin],

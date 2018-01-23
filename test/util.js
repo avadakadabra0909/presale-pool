@@ -5,6 +5,14 @@ const Web3Utils = require('web3-utils');
 
 const expect = chai.expect;
 
+function toWei(web3, value, unit) {
+	return web3.utils.toWei(value.toString(), unit);
+}
+
+function fromWei(web3, value, unit) {
+	return web3.utils.fromWei(value.toString(), unit);
+}
+
 function findImports (name) {
     let filePath = `./contracts/${name}`;
     try {
@@ -67,7 +75,7 @@ async function deployContract(web3, contractName, creatorAddress, contractArgs, 
         bytecode = solc.linkBytecode(bytecode, libs);
     }
 
-    return await deployCompiledContract(
+    let contract = await deployCompiledContract(
         web3,
         bytecode,
         compiledContract.interface,
@@ -75,6 +83,8 @@ async function deployContract(web3, contractName, creatorAddress, contractArgs, 
         contractArgs,
         initialBalance
     );
+	contract.setProvider(web3.currentProvider);
+	return contract;
 }
 
 function createPoolArgs(options) {
@@ -98,7 +108,7 @@ function expectVMException(prom) {
     return new Promise(
         function (resolve, reject) {
             prom.catch((e) => {
-                expect(e.message).to.include("VM Exception")
+                expect(e.message).to.include("VM Exception");
                 resolve(e);
             });
         }
@@ -189,10 +199,10 @@ async function expectBalanceChanges(web3, addresses, differences, operation) {
     for (let i = 0; i < addresses.length; i++) {
         let balanceAfterRefund = await web3.eth.getBalance(addresses[i]);
         let difference = parseInt(balanceAfterRefund) - parseInt(beforeBalances[i]);
-        let expectedDifference = differences[i];
-        if (expectedDifference == 0) {
+        let expectedDifference = parseInt(differences[i]);
+        if (expectedDifference === 0) {
             let differenceInEther = parseFloat(
-                web3.utils.fromWei(difference, "ether")
+                fromWei(web3, difference, "ether")
             );
             expect(differenceInEther).to.be.closeTo(0, 0.01);
         } else {
@@ -202,13 +212,14 @@ async function expectBalanceChanges(web3, addresses, differences, operation) {
 }
 
 async function expectBalanceChange(web3, address, expectedDifference, operation) {
+	expectedDifference = parseInt(expectedDifference);
     let balance = await web3.eth.getBalance(address);
     await operation();
     let balanceAfterRefund = await web3.eth.getBalance(address);
     let difference = parseInt(balanceAfterRefund) - parseInt(balance);
-    if (expectedDifference == 0) {
+    if (expectedDifference === 0) {
         let differenceInEther = parseFloat(
-            web3.utils.fromWei(difference, "ether")
+            fromWei(web3, difference, "ether")
         );
         expect(differenceInEther).to.be.closeTo(0, 0.01);
     } else {
@@ -227,6 +238,8 @@ function distributionGasCosts(options) {
 }
 
 module.exports = {
+	toWei: toWei,
+	fromWei: fromWei,
     createPoolArgs: createPoolArgs,
     deployContract: deployContract,
     distributionGasCosts: distributionGasCosts,
@@ -237,4 +250,4 @@ module.exports = {
     getBalances: getBalances,
     methodWithGas: methodWithGas,
     verifyState: verifyState,
-}
+};

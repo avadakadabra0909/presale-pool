@@ -31,8 +31,8 @@ describe('confirmTokens', () => {
             creator,
             [
                 [feeTeamMember],
-                web3.utils.toWei(0.005, "ether"),
-                web3.utils.toWei(0.01, "ether")
+                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, 0.01, "ether")
             ]
         );
         PresalePoolLib = await util.deployContract(
@@ -57,8 +57,8 @@ describe('confirmTokens', () => {
             creator,
             util.createPoolArgs({
                 feeManager: PBFeeManager.options.address,
-                maxContribution: web3.utils.toWei(50, "ether"),
-                maxPoolBalance: web3.utils.toWei(50, "ether")
+                maxContribution: util.toWei(web3, 50, "ether"),
+                maxPoolBalance: util.toWei(web3, 50, "ether")
             }),
             0,
             { 'PoolLib.sol:PoolLib': PresalePoolLib.options.address }
@@ -75,7 +75,7 @@ describe('confirmTokens', () => {
         await web3.eth.sendTransaction({
             from: tokenHolder,
             to: TokenContract.options.address,
-            value: web3.utils.toWei(.1, "ether")
+            value: util.toWei(web3, .1, "ether")
         });
 
         await util.methodWithGas(
@@ -101,7 +101,7 @@ describe('confirmTokens', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.payToPresale(creator, 0, 0, '0x'),
@@ -133,7 +133,7 @@ describe('confirmTokens', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.payToPresale(creator, 0, 0, '0x'),
@@ -166,7 +166,7 @@ describe('confirmTokens', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.payToPresale(creator, 0, 0, '0x'),
@@ -209,7 +209,7 @@ describe('confirmTokens', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.payToPresale(TestToken.options.address, 0, 0, '0x'),
@@ -238,7 +238,7 @@ describe('confirmTokens', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.payToPresale(creator, 0, 0, '0x'),
@@ -268,7 +268,7 @@ describe('confirmTokens', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.payToPresale(TestToken.options.address, 0, 0, '0x'),
@@ -344,7 +344,7 @@ describe('confirmTokens', () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
             creator,
-            web3.utils.toWei(2, "ether")
+            util.toWei(web3, 2, "ether")
         );
         await util.methodWithGas(
             PresalePool.methods.payToPresale(creator, 0, 0, '0x'),
@@ -379,22 +379,22 @@ describe('confirmTokens', () => {
             await util.methodWithGas(
                 PresalePool.methods.deposit(),
                 creator,
-                web3.utils.toWei(2, "ether")
+                util.toWei(web3, 2, "ether")
             );
             await util.methodWithGas(
                 PresalePool.methods.deposit(),
                 buyer1,
-                web3.utils.toWei(5, "ether")
+                util.toWei(web3, 5, "ether")
             );
             await util.methodWithGas(
                 PresalePool.methods.deposit(),
                 buyer2,
-                web3.utils.toWei(1, "ether")
+                util.toWei(web3, 1, "ether")
             );
 
             await util.methodWithGas(
                 PresalePool.methods.setContributionSettings(
-                    0, web3.utils.toWei(2, "ether"), web3.utils.toWei(3, "ether"), []
+                    0, util.toWei(web3, 2, "ether"), util.toWei(web3, 3, "ether"), []
                 ),
                 creator
             );
@@ -406,20 +406,20 @@ describe('confirmTokens', () => {
                 creator
             );
 
-            let expectedBalances = {}
+            let expectedBalances = {};
             expectedBalances[creator] = {
-                remaining: web3.utils.toWei(0, "ether"),
-                contribution: web3.utils.toWei(2, "ether")
-            }
+                remaining: util.toWei(web3, 0, "ether"),
+                contribution: util.toWei(web3, 2, "ether")
+            };
             expectedBalances[buyer1] = {
-                remaining: web3.utils.toWei(4, "ether"),
-                contribution: web3.utils.toWei(1, "ether")
-            }
+                remaining: util.toWei(web3, 4, "ether"),
+                contribution: util.toWei(web3, 1, "ether")
+            };
             expectedBalances[buyer2] = {
-                remaining: web3.utils.toWei(1, "ether"),
-                contribution: web3.utils.toWei(0, "ether")
-            }
-            await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(5 + poolFee*3, "ether"));
+                remaining: util.toWei(web3, 1, "ether"),
+                contribution: util.toWei(web3, 0, "ether")
+            };
+            await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 5 + poolFee*3, "ether"));
 
             expect(await TestToken.methods.totalTokens().call())
             .to.equal("940");
@@ -445,7 +445,7 @@ describe('confirmTokens', () => {
             await util.expectBalanceChanges(
                 web3,
                 [creator, buyer1, buyer2],
-                [0, 4, 1].map(x => web3.utils.toWei(x, "ether")),
+                [0, 4, 1].map(x => util.toWei(web3, x, "ether")),
                 () => {
                         return util.methodWithGas(
                             PresalePool.methods.transferTokensToAll(
@@ -455,7 +455,7 @@ describe('confirmTokens', () => {
                         );
                 }
             );
-            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], util.toWei(web3, 0, "ether"), () => {
                 return util.methodWithGas(
                     PresalePool.methods.transferTokensToAll(TestToken.options.address),
                     creator
@@ -468,7 +468,7 @@ describe('confirmTokens', () => {
 
             await transferMoreTokensToPool(TestToken, 18);
 
-            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], util.toWei(web3, 0, "ether"), () => {
                 return util.methodWithGas(
                     PresalePool.methods.transferTokensToAll(TestToken.options.address),
                     creator
@@ -481,18 +481,18 @@ describe('confirmTokens', () => {
 
             let expectedBalances = {};
             expectedBalances[creator] = {
-                remaining: web3.utils.toWei(0, "ether"),
-                contribution: web3.utils.toWei(2, "ether")
-            }
+                remaining: util.toWei(web3, 0, "ether"),
+                contribution: util.toWei(web3, 2, "ether")
+            };
             expectedBalances[buyer1] = {
-                remaining: web3.utils.toWei(0, "ether"),
-                contribution: web3.utils.toWei(1, "ether")
-            }
+                remaining: util.toWei(web3, 0, "ether"),
+                contribution: util.toWei(web3, 1, "ether")
+            };
             expectedBalances[buyer2] = {
-                remaining: web3.utils.toWei(0, "ether"),
-                contribution: web3.utils.toWei(0, "ether")
-            }
-            await util.verifyState(web3, PresalePool, expectedBalances, web3.utils.toWei(0, "ether"));
+                remaining: util.toWei(web3, 0, "ether"),
+                contribution: util.toWei(web3, 0, "ether")
+            };
+            await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 0, "ether"));
         });
 
         it("transferTokensTo()", async () => {
@@ -502,7 +502,7 @@ describe('confirmTokens', () => {
             await util.expectBalanceChanges(
                 web3,
                 [creator, buyer1, buyer2],
-                [0, 4, 1].map(x => web3.utils.toWei(x, "ether")),
+                [0, 4, 1].map(x => util.toWei(web3, x, "ether")),
                 () => {
                     return util.methodWithGas(
                         PresalePool.methods.transferTokensTo(
@@ -513,7 +513,7 @@ describe('confirmTokens', () => {
                     );
                 }
             );
-            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], util.toWei(web3, 0, "ether"), () => {
                 return util.methodWithGas(
                     PresalePool.methods.transferTokensTo(
                         TestToken.options.address,
@@ -529,7 +529,7 @@ describe('confirmTokens', () => {
 
             await transferMoreTokensToPool(TestToken, 18);
 
-            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], web3.utils.toWei(0, "ether"), () => {
+            await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], util.toWei(web3, 0, "ether"), () => {
                 return util.methodWithGas(
                     PresalePool.methods.transferTokensTo(
                         TestToken.options.address,
@@ -545,22 +545,22 @@ describe('confirmTokens', () => {
 
             let expectedBalances = {};
             expectedBalances[creator] = {
-                remaining: web3.utils.toWei(0, "ether"),
-                contribution: web3.utils.toWei(2, "ether")
-            }
+                remaining: util.toWei(web3, 0, "ether"),
+                contribution: util.toWei(web3, 2, "ether")
+            };
             expectedBalances[buyer1] = {
-                remaining: web3.utils.toWei(0, "ether"),
-                contribution: web3.utils.toWei(1, "ether")
-            }
+                remaining: util.toWei(web3, 0, "ether"),
+                contribution: util.toWei(web3, 1, "ether")
+            };
             expectedBalances[buyer2] = {
-                remaining: web3.utils.toWei(0, "ether"),
-                contribution: web3.utils.toWei(0, "ether")
-            }
+                remaining: util.toWei(web3, 0, "ether"),
+                contribution: util.toWei(web3, 0, "ether")
+            };
             await util.verifyState(
                 web3,
                 PresalePool,
                 expectedBalances,
-                web3.utils.toWei(0, "ether")
+                util.toWei(web3, 0, "ether")
             );
         });
 
@@ -568,12 +568,12 @@ describe('confirmTokens', () => {
             await util.methodWithGas(
                 PresalePool.methods.deposit(),
                 buyer1,
-                web3.utils.toWei(5, "ether")
+                util.toWei(web3, 5, "ether")
             );
             await util.methodWithGas(
                 PresalePool.methods.deposit(),
                 blacklistedBuyer,
-                web3.utils.toWei(5, "ether")
+                util.toWei(web3, 5, "ether")
             );
 
             await util.methodWithGas(
@@ -584,20 +584,20 @@ describe('confirmTokens', () => {
                 creator
             );
 
-            let expectedBalances = {}
+            let expectedBalances = {};
             expectedBalances[buyer1] = {
-                remaining: web3.utils.toWei(0, "ether"),
-                contribution: web3.utils.toWei(5, "ether")
-            }
+                remaining: util.toWei(web3, 0, "ether"),
+                contribution: util.toWei(web3, 5, "ether")
+            };
             expectedBalances[blacklistedBuyer] = {
-                remaining: web3.utils.toWei(0, "ether"),
-                contribution: web3.utils.toWei(5, "ether")
-            }
+                remaining: util.toWei(web3, 0, "ether"),
+                contribution: util.toWei(web3, 5, "ether")
+            };
             await util.verifyState(
                 web3,
                 PresalePool,
                 expectedBalances,
-                web3.utils.toWei(10*poolFee, "ether")
+                util.toWei(web3, 10*poolFee, "ether")
             );
 
             expect(await TestToken.methods.totalTokens().call())
