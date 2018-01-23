@@ -97,7 +97,6 @@ describe('pay to presale address', () => {
         );
     });
 
-
     it("cant be called from failed state", async () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
