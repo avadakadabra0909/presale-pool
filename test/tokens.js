@@ -462,9 +462,9 @@ describe('confirmTokens', () => {
                 );
             });
 
-            await tokenBalanceEquals(creator, 40);
-            await tokenBalanceEquals(buyer1, 20);
-            await tokenBalanceEquals(buyer2, 0);
+            await util.tokenBalanceEquals(TestToken, creator, 40);
+            await util.tokenBalanceEquals(TestToken, buyer1, 20);
+            await util.tokenBalanceEquals(TestToken, buyer2, 0);
 
             await transferMoreTokensToPool(TestToken, 18);
 
@@ -475,9 +475,9 @@ describe('confirmTokens', () => {
                 );
             });
 
-            await tokenBalanceEquals(creator, 52);
-            await tokenBalanceEquals(buyer1, 26);
-            await tokenBalanceEquals(buyer2, 0);
+            await util.tokenBalanceEquals(TestToken, creator, 52);
+            await util.tokenBalanceEquals(TestToken, buyer1, 26);
+            await util.tokenBalanceEquals(TestToken, buyer2, 0);
 
             let expectedBalances = {};
             expectedBalances[creator] = {
@@ -523,9 +523,9 @@ describe('confirmTokens', () => {
                 );
             });
 
-            await tokenBalanceEquals(creator, 40);
-            await tokenBalanceEquals(buyer1, 20);
-            await tokenBalanceEquals(buyer2, 0);
+            await util.tokenBalanceEquals(TestToken, creator, 40);
+            await util.tokenBalanceEquals(TestToken, buyer1, 20);
+            await util.tokenBalanceEquals(TestToken, buyer2, 0);
 
             await transferMoreTokensToPool(TestToken, 18);
 
@@ -539,9 +539,9 @@ describe('confirmTokens', () => {
                 );
             });
 
-            await tokenBalanceEquals(creator, 52);
-            await tokenBalanceEquals(buyer1, 20);
-            await tokenBalanceEquals(buyer2, 0);
+            await util.tokenBalanceEquals(TestToken, creator, 52);
+            await util.tokenBalanceEquals(TestToken, buyer1, 20);
+            await util.tokenBalanceEquals(TestToken, buyer2, 0);
 
             let expectedBalances = {};
             expectedBalances[creator] = {
@@ -623,11 +623,11 @@ describe('confirmTokens', () => {
                 creator
             );
 
-            await tokenBalanceEquals(PresalePool.options.address, 30);
-            await tokenBalanceEquals(buyer1, 30);
-            await tokenBalanceEquals(buyer2, 0);
-            await tokenBalanceEquals(blacklistedBuyer, 0);
-            await tokenBalanceEquals(creator, 0);
+            await util.tokenBalanceEquals(TestToken, PresalePool.options.address, 30);
+            await util.tokenBalanceEquals(TestToken, buyer1, 30);
+            await util.tokenBalanceEquals(TestToken, buyer2, 0);
+            await util.tokenBalanceEquals(TestToken, blacklistedBuyer, 0);
+            await util.tokenBalanceEquals(TestToken, creator, 0);
 
             await util.methodWithGas(
                 PresalePool.methods.transferTokensToAll(
@@ -636,11 +636,11 @@ describe('confirmTokens', () => {
                 creator
             );
 
-            await tokenBalanceEquals(PresalePool.options.address, 30);
-            await tokenBalanceEquals(buyer1, 30);
-            await tokenBalanceEquals(buyer2, 0);
-            await tokenBalanceEquals(blacklistedBuyer, 0);
-            await tokenBalanceEquals(creator, 0);
+            await util.tokenBalanceEquals(TestToken, PresalePool.options.address, 30);
+            await util.tokenBalanceEquals(TestToken, buyer1, 30);
+            await util.tokenBalanceEquals(TestToken, buyer2, 0);
+            await util.tokenBalanceEquals(TestToken, blacklistedBuyer, 0);
+            await util.tokenBalanceEquals(TestToken, creator, 0);
         });
     });
 });

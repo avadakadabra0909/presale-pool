@@ -149,6 +149,13 @@ async function getBalances(PresalePool) {
     return balances;
 }
 
+/**
+ * @param web3
+ * @param PresalePool contract
+ * @param expectedBalances Object with address as property name and balance in wei as value
+ * @param expectedPoolBalance Balance of the pool in Wei
+ * @returns {Promise.<void>}
+ */
 async function verifyState(web3, PresalePool, expectedBalances, expectedPoolBalance) {
     let balances = await getBalances(PresalePool);
 
@@ -227,6 +234,14 @@ async function expectBalanceChange(web3, address, expectedDifference, operation)
     }
 }
 
+async function tokenBalanceEquals(contract, address, amount) {
+	expect(
+		parseInt(
+			await contract.methods.balanceOf(address).call()
+		)
+	).to.equal(amount);
+}
+
 function distributionGasCosts(options) {
     let { numContributors, numDrops, gasPriceGwei } = options;
     if (gasPriceGwei == null) {
@@ -250,4 +265,5 @@ module.exports = {
     getBalances: getBalances,
     methodWithGas: methodWithGas,
     verifyState: verifyState,
+	tokenBalanceEquals: tokenBalanceEquals
 };
