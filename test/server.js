@@ -8,15 +8,14 @@ module.exports = {
         server = TestRPC.server(options);
         return new Promise(
             function (resolve, reject) {
-                let port = 8545;
+                const port = 8550;
                 server.listen(port, function(err, blockchain) {
                     if (err) {
                         reject(err);
-                        return;
                     } else {
                         resolve({
                             addresses: Object.keys(blockchain.accounts),
-                            web3: new Web3(new Web3.providers.HttpProvider("http://localhost:"+port))
+                            web3: new Web3(new Web3.providers.HttpProvider("http://localhost:" + port))
                         });
                     }
                 });
