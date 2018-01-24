@@ -241,7 +241,15 @@ describe('confirmTokens', () => {
                 creator
             )
         );
-        await transferMoreTokensToPool(TestToken, 18);
+        // Transfer more tokens
+        let NumTokensNotFormatted = new BigNumber("1000").mul(new BigNumber("10").pow(new BigNumber("18")));
+        await util.methodWithGas(
+            TestToken.methods.transfer(
+                PresalePool.options.address,
+                NumTokensNotFormatted.toString(10)
+            ),
+            tokenHolder
+        );
         await util.methodWithGas(
             PresalePool.methods.confirmTokens(TestToken.options.address, false),
             creator
@@ -270,7 +278,15 @@ describe('confirmTokens', () => {
             creator,
             [blacklistedBuyer]
         );
-        await transferMoreTokensToPool(OtherTestToken, 18);
+        // Transfer more tokens
+        let NumTokensNotFormatted = new BigNumber("1000").mul(new BigNumber("10").pow(new BigNumber("18")));
+        await util.methodWithGas(
+            TestToken.methods.transfer(
+                PresalePool.options.address,
+                NumTokensNotFormatted.toString(10)
+            ),
+            tokenHolder
+        );
         await util.expectVMException(
             util.methodWithGas(
                 PresalePool.methods.confirmTokens(OtherTestToken.options.address, false),
