@@ -449,12 +449,12 @@ describe('confirmTokens', () => {
                 [creator, buyer1, buyer2],
                 [0, 4, 1].map(x => util.toWei(web3, x, "ether")),
                 () => {
-                    return util.methodWithGas(
-                        PresalePool.methods.transferTokensToAll(
-                            TestToken.options.address
-                        ),
+                        return util.methodWithGas(
+                            PresalePool.methods.transferTokensToAll(
+                                TestToken.options.address
+                            ),
                         creator
-                    );
+                        );
                 }
             );
             await util.expectBalanceChangeAddresses(web3, [creator, buyer1, buyer2], util.toWei(web3, 0, "ether"), () => {
@@ -468,19 +468,19 @@ describe('confirmTokens', () => {
             const zero = new BigNumber(0);
 
             await util.tokenBalanceEquals(TestToken, creator,
-                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, NumTestTokenNotFormatted));
+                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
             await util.tokenBalanceEquals(TestToken, buyer1,
-                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, NumTestTokenNotFormatted));
+                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
             await util.tokenBalanceEquals(TestToken, buyer2,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, NumTestTokenNotFormatted));
+                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
 
 
             // send 10 more tokens
-            let NumTestTokenNotFormatted2 = new BigNumber("10").mul(new BigNumber("10").pow(new BigNumber("18")));
+            let additionalTokensBN = new BigNumber("10").mul(new BigNumber("10").pow(new BigNumber("18")));
             await util.methodWithGas(
                 TestToken.methods.transfer(
                     PresalePool.options.address,
-                    NumTestTokenNotFormatted2.toString(10)
+                    additionalTokensBN.toString(10)
                 ),
                 tokenHolder
             );
@@ -492,14 +492,13 @@ describe('confirmTokens', () => {
                 );
             });
 
-            let totalTokensSent = NumTestTokenNotFormatted.add(NumTestTokenNotFormatted2);
+            let totalTokensSent = NumTestTokenNotFormatted.add(additionalTokensBN);
             await util.tokenBalanceEquals(TestToken, creator,
-                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, totalTokensSent));
+                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 3, 'ether'), zero, totalTokensSent));
             await util.tokenBalanceEquals(TestToken, buyer1,
-                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, totalTokensSent));
+                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 3, 'ether'), zero, totalTokensSent));
             await util.tokenBalanceEquals(TestToken, buyer2,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, totalTokensSent));
-
+                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 3, 'ether'), zero, totalTokensSent));
 
             let expectedBalances = {};
             expectedBalances[creator] = {
@@ -549,18 +548,18 @@ describe('confirmTokens', () => {
             const zero = new BigNumber(0);
 
             await util.tokenBalanceEquals(TestToken, creator,
-                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, NumTestTokenNotFormatted));
+                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
             await util.tokenBalanceEquals(TestToken, buyer1,
-                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, NumTestTokenNotFormatted));
+                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
             await util.tokenBalanceEquals(TestToken, buyer2,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, NumTestTokenNotFormatted));
+                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
 
             // send 10 more tokens
-            let NumTestTokenNotFormatted2 = new BigNumber("10").mul(new BigNumber("10").pow(new BigNumber("18")));
+            let additionalTokensBN = new BigNumber("10").mul(new BigNumber("10").pow(new BigNumber("18")));
             await util.methodWithGas(
                 TestToken.methods.transfer(
                     PresalePool.options.address,
-                    NumTestTokenNotFormatted2.toString(10)
+                    additionalTokensBN.toString(10)
                 ),
                 tokenHolder
             );
@@ -576,13 +575,13 @@ describe('confirmTokens', () => {
                 );
             });
 
-            let totalTokensSent = NumTestTokenNotFormatted.add(NumTestTokenNotFormatted2);
+            let totalTokensSent = NumTestTokenNotFormatted.add(additionalTokensBN);
             await util.tokenBalanceEquals(TestToken, creator,
-                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, totalTokensSent));
+                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 3, 'ether'), zero, totalTokensSent));
             await util.tokenBalanceEquals(TestToken, buyer1,
-                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, NumTestTokenNotFormatted));
+                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
             await util.tokenBalanceEquals(TestToken, buyer2,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 2+1, 'ether'), zero, NumTestTokenNotFormatted));
+                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
 
 
             let expectedBalances = {};
@@ -606,6 +605,94 @@ describe('confirmTokens', () => {
             );
         });
 
+        it("skips blacklisted sender", async () => {
+            await util.methodWithGas(
+                PresalePool.methods.deposit(),
+                buyer1,
+                util.toWei(web3, 5, "ether")
+            );
+            await util.methodWithGas(
+                PresalePool.methods.deposit(),
+                blacklistedBuyer,
+                util.toWei(web3, 5, "ether")
+            );
+
+            await util.methodWithGas(
+                PresalePool.methods.payToPresale(
+                    TestToken.options.address,
+                    0, 0, '0x'
+                ),
+                creator
+            );
+
+            let expectedBalances = {};
+            expectedBalances[buyer1] = {
+                remaining: util.toWei(web3, 0, "ether"),
+                contribution: util.toWei(web3, 5, "ether")
+            };
+            expectedBalances[blacklistedBuyer] = {
+                remaining: util.toWei(web3, 0, "ether"),
+                contribution: util.toWei(web3, 5, "ether")
+            };
+            await util.verifyState(
+                web3,
+                PresalePool,
+                expectedBalances,
+                util.toWei(web3, 10*poolFee, "ether")
+            );
+
+            await util.methodWithGas(
+                PresalePool.methods.confirmTokens(TestToken.options.address, true),
+                creator
+            );
+
+            await util.methodWithGas(
+                PresalePool.methods.transferTokensTo(
+                    TestToken.options.address,
+                    [
+                        blacklistedBuyer,
+                        blacklistedBuyer,
+                        buyer1,
+                        buyer2,
+                        buyer1,
+                        creator
+                    ]
+                ),
+                creator
+            );
+
+            let NumTestTokenNotFormatted = new BigNumber("1000").mul(new BigNumber("10").pow(new BigNumber("18")));
+            const zero = new BigNumber(0);
+
+            await util.tokenBalanceEquals(TestToken, creator,
+                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(TestToken, buyer1,
+                util.getTokenShare(util.toWei(web3, 5, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(TestToken, buyer2,
+                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(TestToken, blacklistedBuyer,
+                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(TestToken, PresalePool.options.address,
+                util.getTokenShare(util.toWei(web3, 5, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+
+            await util.methodWithGas(
+                PresalePool.methods.transferTokensToAll(
+                    TestToken.options.address
+                ),
+                creator
+            );
+
+            await util.tokenBalanceEquals(TestToken, creator,
+                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(TestToken, buyer1,
+                util.getTokenShare(util.toWei(web3, 5, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(TestToken, buyer2,
+                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(TestToken, blacklistedBuyer,
+                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(TestToken, PresalePool.options.address,
+                util.getTokenShare(util.toWei(web3, 5, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+        });
     });
 });
 
