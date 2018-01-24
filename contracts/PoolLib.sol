@@ -307,7 +307,7 @@ library PoolLib {
     }
 
     function version() public pure returns (uint, uint, uint) {
-        return (2, 0, 2);
+        return (2, 0, 3);
     }
 
     function discountFees(PoolStorage storage self, uint recipientFeesPerEther, uint teamFeesPerEther) public {
