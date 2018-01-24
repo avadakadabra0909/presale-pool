@@ -519,7 +519,7 @@ describe('PBFeeManager', () => {
 
         let totalDonations = 4;
         let teamPayout = 10/3.0;
-        let expectedInvidualPayout = util.toWei(web3, 
+        let expectedInvidualPayout = util.toWei(web3,
             (totalDonations + teamPayout)/team.length,
             "ether"
         );
@@ -571,7 +571,7 @@ describe('PBFeeManager', () => {
 
         let totalDonations = 4;
         let teamPayout = 10/3.0;
-        let expectedInvidualPayout = util.toWei(web3, 
+        let expectedInvidualPayout = util.toWei(web3,
             (totalDonations + teamPayout)/team.length,
             "ether"
         );
@@ -628,7 +628,7 @@ describe('PBFeeManager', () => {
 
         let totalDonations = 4;
         let teamPayout = 10/3.0;
-        let expectedInvidualPayout = util.toWei(web3, 
+        let expectedInvidualPayout = util.toWei(web3,
             (totalDonations + teamPayout)/team.length,
             "ether"
         );
@@ -658,7 +658,7 @@ describe('PBFeeManager', () => {
         payoutFor = (i) => {
             let total = (totalDonations + teamPayout)/team.length - claimedAmounts[i];
             claimedAmounts[i] += total;
-            return parseFloat(util.toWei(web3, 
+            return parseFloat(util.toWei(web3,
                 total,
                 "ether"
             ));
@@ -740,7 +740,7 @@ describe('PBFeeManager', () => {
             TestToken = await util.deployContract(
                 web3,
                 "TestToken",
-	            tokenHolder,
+                tokenHolder,
                 [blacklisted]
             );
             FeeManager = await createFees({
@@ -756,7 +756,7 @@ describe('PBFeeManager', () => {
                     FeeManager.options.address,
                     60
                 ),
-	            tokenHolder
+                tokenHolder
             );
         });
 
@@ -768,23 +768,23 @@ describe('PBFeeManager', () => {
                     creator
                 )
             );
-	        await util.tokenBalanceEquals(TestToken, FeeManager.options.address, 60);
-	        await util.methodWithGas(
+            await util.tokenBalanceEquals(TestToken, FeeManager.options.address, 60);
+            await util.methodWithGas(
                 FeeManager.methods.claimMyTeamTokens(TestToken.options.address),
                 memberA
             );
-	        await util.tokenBalanceEquals(TestToken, FeeManager.options.address, 40);
-	        await util.methodWithGas(
+            await util.tokenBalanceEquals(TestToken, FeeManager.options.address, 40);
+            await util.methodWithGas(
                 FeeManager.methods.claimMyTeamTokens(TestToken.options.address),
                 blacklisted
             );
-	        await util.tokenBalanceEquals(TestToken, FeeManager.options.address, 40);
-	        await util.methodWithGas(
+            await util.tokenBalanceEquals(TestToken, FeeManager.options.address, 40);
+            await util.methodWithGas(
                 FeeManager.methods.claimMyTeamTokens(TestToken.options.address),
                 memberB
             );
-	        await util.tokenBalanceEquals(TestToken, FeeManager.options.address, 20);
-	        await util.methodWithGas(
+            await util.tokenBalanceEquals(TestToken, FeeManager.options.address, 20);
+            await util.methodWithGas(
                 FeeManager.methods.claimMyTeamTokens(TestToken.options.address),
                 memberA
             );
@@ -810,7 +810,7 @@ describe('PBFeeManager', () => {
                 FeeManager.methods.distributeTeamTokens(TestToken.options.address),
                 memberB
             );
-	        await util.tokenBalanceEquals(TestToken, FeeManager.options.address, 20);
+            await util.tokenBalanceEquals(TestToken, FeeManager.options.address, 20);
             await util.tokenBalanceEquals(TestToken, memberA, 20);
             await util.tokenBalanceEquals(TestToken, memberB, 20);
             await util.tokenBalanceEquals(TestToken, blacklisted, 0);

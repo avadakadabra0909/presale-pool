@@ -19,7 +19,7 @@ describe('fees', () => {
         web3 = result.web3;
         creator = result.addresses[0].toLowerCase();
         team = [result.addresses[1].toLowerCase()];
-	    tokenHolder = result.addresses[2].toLowerCase();
+        tokenHolder = result.addresses[2].toLowerCase();
         addresses = result.addresses;
         PresalePoolLib = await util.deployContract(
             web3,
@@ -774,7 +774,7 @@ describe('fees', () => {
         let TestToken = await util.deployContract(
             web3,
             "TestToken",
-	        tokenHolder,
+            tokenHolder,
             [addresses[4]]
         );
 
@@ -790,9 +790,9 @@ describe('fees', () => {
             util.toWei(web3, 2, "ether")
         );
 
-	    // Pay to token contract and get 1000 tokens
-	    let NumTestTokenNotFormatted = new BigNumber("1000").mul(new BigNumber("10").pow(new BigNumber("18")));
-	    await util.methodWithGas(
+        // Pay to token contract and get 1000 tokens
+        let NumTestTokenNotFormatted = new BigNumber("1000").mul(new BigNumber("10").pow(new BigNumber("18")));
+        await util.methodWithGas(
             PresalePool.methods.payToPresale(TestToken.options.address, 0, 0, '0x'),
             creator
         );
@@ -813,19 +813,19 @@ describe('fees', () => {
         let difference = parseInt(afterBalance) - parseInt(beforeBalance);
         expect(difference / expectedPayout).to.be.within(.98, 1.0);
 
-	    await util.tokenBalanceEquals(TestToken, PresalePool.options.address, NumTestTokenNotFormatted);
+        await util.tokenBalanceEquals(TestToken, PresalePool.options.address, NumTestTokenNotFormatted);
 
-	    await util.methodWithGas(
+        await util.methodWithGas(
             PresalePool.methods.transferTokensToAll(TestToken.options.address),
             creator
         );
 
-	    const poolBalanceInWei = new BigNumber(util.toWei(web3, 4+2, 'ether'));
-	    const zero = new BigNumber(0);
-	    await util.tokenBalanceEquals(TestToken, creator,
-		    util.getTokenShare(new BigNumber(util.toWei(web3, 4, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
-	    await util.tokenBalanceEquals(TestToken, buyer1,
-		    util.getTokenShare(new BigNumber(util.toWei(web3, 2, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
+        const poolBalanceInWei = new BigNumber(util.toWei(web3, 4+2, 'ether'));
+        const zero = new BigNumber(0);
+        await util.tokenBalanceEquals(TestToken, creator,
+            util.getTokenShare(new BigNumber(util.toWei(web3, 4, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
+        await util.tokenBalanceEquals(TestToken, buyer1,
+            util.getTokenShare(new BigNumber(util.toWei(web3, 2, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
 
         await util.expectVMException(
             util.methodWithGas(
