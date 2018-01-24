@@ -1,12 +1,12 @@
-pragma solidity ^0.4.15;
+pragma solidity 0.4.19;
 
 import "./Util.sol";
 import "./Fraction.sol";
 import "./QuotaTracker.sol";
 
 interface ERC20 {
-    function transfer(address _to, uint _value) returns (bool success);
-    function balanceOf(address _owner) constant returns (uint balance);
+    function transfer(address _to, uint _value) public returns (bool success);
+    function balanceOf(address _owner) public constant returns (uint balance);
 }
 
 contract PBFeeManager {
@@ -29,7 +29,7 @@ contract PBFeeManager {
     uint public minTeamFee;
     uint public maxTeamFee;
 
-    function PBFeeManager(address[] _teamMembers, uint _minTeamFee, uint _maxTeamFee) payable {
+    function PBFeeManager(address[] _teamMembers, uint _minTeamFee, uint _maxTeamFee) public payable {
         require(_teamMembers.length > 0);
         for (uint i = 0; i < _teamMembers.length; i++) {
             address addr = _teamMembers[i];
@@ -139,7 +139,7 @@ contract PBFeeManager {
         return recipientFeesPerEther + teamFeesPerEther;
     }
 
-    function getTotalFeesPerEther() external returns(uint) {
+    function getTotalFeesPerEther() view external returns(uint) {
         Fees storage fees = feesForContract[msg.sender];
         return fees.recipientFraction[1];
     }

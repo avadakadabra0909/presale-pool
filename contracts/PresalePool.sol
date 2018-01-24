@@ -1,4 +1,4 @@
-pragma solidity ^0.4.15;
+pragma solidity 0.4.19;
 
 import "./PoolLib.sol";
 
@@ -26,7 +26,7 @@ contract PresalePool {
         uint _totalTokenDrops,
         address _autoDistributionWallet,
         uint256 _code
-    ) {
+    ) public {
         poolStorage.create(
             _feeManager,
             _creatorFeesPerEther,
@@ -61,7 +61,7 @@ contract PresalePool {
         poolStorage.tokenFallback(_from, _value, _data);
     }
 
-    function version() external returns (uint, uint, uint) {
+    function version() external pure returns (uint, uint, uint) {
         return PoolLib.version();
     }
 
@@ -161,15 +161,15 @@ contract PresalePool {
         return (poolStorage.participants, contribution, remaining, whitelisted, exists);
     }
 
-    function poolContributionBalance() external returns(uint) {
+    function poolContributionBalance() external view returns(uint) {
         return poolStorage.poolContributionBalance;
     }
 
-    function totalContributors() external returns(uint) {
+    function totalContributors() external view returns(uint) {
         return poolStorage.totalContributors;
     }
 
-    function totalTokenDrops() external returns(uint) {
+    function totalTokenDrops() external view returns(uint) {
         return poolStorage.totalTokenDrops;
     }
 }
