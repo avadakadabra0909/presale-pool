@@ -2,6 +2,7 @@ const chai = require('chai');
 
 const server = require('./server');
 const util = require('./util');
+const BigNumber = util.BigNumber;
 
 const expect = chai.expect;
 
@@ -152,16 +153,10 @@ describe('Chaining pools', () => {
         await server.tearDown();
     });
 
-    async function tokenBalanceEquals(TokenContract, address, amount) {
-        expect(
-            parseInt(
-                await TokenContract.methods.balanceOf(address).call()
-            )
-        ).to.equal(amount);
-    }
-
     it('distributes tokens', async () => {
-        await util.methodWithGas(
+	    // Pay to token contract and get 1000 tokens
+	    let NumTestTokenNotFormatted = new BigNumber("1000").mul(new BigNumber("10").pow(new BigNumber("18")));
+	    await util.methodWithGas(
             PresalePool.methods.payToPresale(
                 TestToken.options.address,
                 0, 0, '0x'
@@ -193,18 +188,23 @@ describe('Chaining pools', () => {
             otherCreator
         );
 
-        let b1 = await TestToken.methods.balanceOf(buyer1).call();
-        let b2 = await TestToken.methods.balanceOf(buyer2).call();
-        let b3 = await TestToken.methods.balanceOf(buyer3).call();
-        let b4 = await TestToken.methods.balanceOf(buyer4).call();
-        let b5 = await TestToken.methods.balanceOf(buyer5).call();
+	    const poolBalanceInWei = new BigNumber(util.toWei(web3, 3*0.995 + 17.5, 'ether'));
+	    const zero = new BigNumber(0);
 
-        let denominator = 3*0.995 +17.5;
-        await tokenBalanceEquals(TestToken, buyer1, Math.floor(5*60 / denominator));
-        await tokenBalanceEquals(TestToken, buyer2, Math.floor(2.5*60 / denominator));
-        await tokenBalanceEquals(TestToken, buyer3, Math.floor(10*60 / denominator));
-        await tokenBalanceEquals(TestToken, buyer4, Math.floor(60 / denominator));
-        await tokenBalanceEquals(TestToken, buyer5, Math.floor(2*60 / denominator));
+        await util.tokenBalanceEquals(TestToken, buyer1,
+	        util.getTokenShare(new BigNumber(util.toWei(web3, 5, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
+        await util.tokenBalanceEquals(TestToken, buyer2,
+	        util.getTokenShare(new BigNumber(util.toWei(web3, 2.5, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
+	    await util.tokenBalanceEquals(TestToken, buyer3,
+		    util.getTokenShare(new BigNumber(util.toWei(web3, 10, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
+
+	    const shareTokensPool2 = util.getTokenShare(new BigNumber(util.toWei(web3, 3*0.995, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted);
+	    const pool2BalanceInWei = new BigNumber(util.toWei(web3, 3, 'ether'));
+
+	    await util.tokenBalanceEquals(TestToken, buyer4,
+		    util.getTokenShare(new BigNumber(util.toWei(web3, 1, 'ether')), pool2BalanceInWei, zero, shareTokensPool2));
+	    await util.tokenBalanceEquals(TestToken, buyer5,
+		    util.getTokenShare(new BigNumber(util.toWei(web3, 2, 'ether')), pool2BalanceInWei, zero, shareTokensPool2));
     });
 
     it('distributes ether after cancellation', async () => {

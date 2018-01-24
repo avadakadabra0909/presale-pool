@@ -2,6 +2,7 @@ const chai = require('chai');
 
 const server = require('./server');
 const util = require('./util');
+const BigNumber = util.BigNumber;
 
 const expect = chai.expect;
 
@@ -452,33 +453,10 @@ describe('Air Drop', () => {
         );
     });
 
-    async function transferMoreTokensToPool(TokenContract, amount) {
-        await web3.eth.sendTransaction({
-            from: creator,
-            to: TokenContract.options.address,
-            value: util.toWei(web3, .1, "ether")
-        });
-
-        await util.methodWithGas(
-            TokenContract.methods.transfer(
-                PresalePool.options.address,
-                amount
-            ),
-            creator
-        );
-    }
-
-    async function tokenBalanceEquals(TokenContract, address, amount) {
-        expect(
-            parseInt(
-                await TokenContract.methods.balanceOf(address).call()
-            )
-        ).to.equal(amount);
-    }
-
-
     it('tokens with auto distribution', async () => {
-        await util.methodWithGas(
+    	// Pay to token contract and get 1000 tokens
+	    let NumTestTokenNotFormatted = new BigNumber("1000").mul(new BigNumber("10").pow(new BigNumber("18")));
+	    await util.methodWithGas(
             PresalePool.methods.payToPresale(
                 TestToken.options.address,
                 0, 0, '0x'
@@ -498,11 +476,20 @@ describe('Air Drop', () => {
             [feeTeamMember]
         );
 
-        await transferMoreTokensToPool(OtherTestToken, 11);
+	    // Send 10 OtherTestToken to pool
+	    let NumOtherTestTokenNotFormatted = new BigNumber("10").mul(new BigNumber("10").pow(new BigNumber("18")));
+	    await util.methodWithGas(
+		    OtherTestToken.methods.transfer(
+			    PresalePool.options.address,
+			    NumOtherTestTokenNotFormatted.toString(10)
+		    ),
+		    creator
+	    );
 
-        let gasCosts = util.distributionGasCosts({
-            numContributors: 2, numDrops: 1, gasPriceGwei: 5
-        });
+	    let gasCosts = util.distributionGasCosts({
+		    numContributors: 2, numDrops: 1, gasPriceGwei: 5
+	    });
+
         // not enough to cover gas costs
         await util.expectVMException(
             util.methodWithGas(
@@ -515,6 +502,7 @@ describe('Air Drop', () => {
                 gasCosts*0.99
             )
         );
+
         // way more than needed for gas costs
         await util.expectVMException(
             util.methodWithGas(
@@ -554,12 +542,18 @@ describe('Air Drop', () => {
             }
         );
 
-        await tokenBalanceEquals(TestToken, buyer1, Math.floor(60*5/11));
-        await tokenBalanceEquals(TestToken, buyer2, 0);
-        await tokenBalanceEquals(TestToken, buyer3, Math.floor(60*6/11));
-        await tokenBalanceEquals(TestToken, buyer4, 0);
-        await tokenBalanceEquals(TestToken, buyer5, 0);
-        await tokenBalanceEquals(TestToken, buyer6, 0);
+	    const poolBalanceInWei = new BigNumber(util.toWei(web3, 11, 'ether'));
+	    const zero = new BigNumber(0);
+	    const share1 = util.getTokenShare(new BigNumber(util.toWei(web3, 5, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted);
+	    const share3 = util.getTokenShare(new BigNumber(util.toWei(web3, 6, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted);
+
+
+        await util.tokenBalanceEquals(TestToken, buyer1, share1);
+        await util.tokenBalanceEquals(TestToken, buyer2, zero);
+        await util.tokenBalanceEquals(TestToken, buyer3, share3);
+        await util.tokenBalanceEquals(TestToken, buyer4, zero);
+        await util.tokenBalanceEquals(TestToken, buyer5, zero);
+        await util.tokenBalanceEquals(TestToken, buyer6, zero);
 
 
         await util.expectBalanceChanges(
@@ -596,13 +590,15 @@ describe('Air Drop', () => {
             feeTeamMember
         );
 
-        await tokenBalanceEquals(OtherTestToken, buyer1, 5);
-        await tokenBalanceEquals(OtherTestToken, buyer2, 0);
-        await tokenBalanceEquals(OtherTestToken, buyer3, 6);
-        await tokenBalanceEquals(OtherTestToken, buyer4, 0);
-        await tokenBalanceEquals(OtherTestToken, buyer5, 0);
-        await tokenBalanceEquals(OtherTestToken, buyer6, 0);
-        await tokenBalanceEquals(OtherTestToken, feeTeamMember, 0);
+        await util.tokenBalanceEquals(OtherTestToken, buyer1,
+	        util.getTokenShare(new BigNumber(util.toWei(web3, 5, 'ether')), poolBalanceInWei, zero, NumOtherTestTokenNotFormatted));
+        await util.tokenBalanceEquals(OtherTestToken, buyer2, 0);
+        await util.tokenBalanceEquals(OtherTestToken, buyer3,
+	        util.getTokenShare(new BigNumber(util.toWei(web3, 6, 'ether')), poolBalanceInWei, zero, NumOtherTestTokenNotFormatted));
+        await util.tokenBalanceEquals(OtherTestToken, buyer4, 0);
+        await util.tokenBalanceEquals(OtherTestToken, buyer5, 0);
+        await util.tokenBalanceEquals(OtherTestToken, buyer6, 0);
+        await util.tokenBalanceEquals(OtherTestToken, feeTeamMember, 0);
     });
 
 });

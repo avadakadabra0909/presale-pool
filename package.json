@@ -10,7 +10,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bignumber.js": "^5.0.0",
     "chai": "^4.1.1",
+    "chai-bignumber": "^2.0.2",
     "ethereumjs-testrpc": "^4.1.1",
     "mocha": "^3.5.0",
     "solc": "^0.4.16",
