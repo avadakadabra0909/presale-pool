@@ -820,12 +820,29 @@ describe('fees', () => {
             creator
         );
 
-        const poolBalanceInWei = new BigNumber(util.toWei(web3, 4+2, 'ether'));
+        const totalPoolFees = 0.025;
+        const poolBalanceInWei = new BigNumber(util.toWei(web3, 6, 'ether'));
         const zero = new BigNumber(0);
         await util.tokenBalanceEquals(TestToken, creator,
-            util.getTokenShare(new BigNumber(util.toWei(web3, 4, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
+            util.getTokenShare(
+                new BigNumber(util.toWei(web3, 4, 'ether')),
+                poolBalanceInWei,
+                totalPoolFees,
+                zero,
+                2,
+                NumTestTokenNotFormatted
+            )
+        );
         await util.tokenBalanceEquals(TestToken, buyer1,
-            util.getTokenShare(new BigNumber(util.toWei(web3, 2, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
+            util.getTokenShare(
+                new BigNumber(util.toWei(web3, 2, 'ether')),
+                poolBalanceInWei,
+                totalPoolFees,
+                zero,
+                2,
+                NumTestTokenNotFormatted
+            )
+        );
 
         await util.expectVMException(
             util.methodWithGas(

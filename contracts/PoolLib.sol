@@ -53,7 +53,7 @@ library PoolLib {
         address expectedTokenAddress;
 
         FeeManager feeManager;
-        uint totalFees;
+        bool feesTransferred;
 
         uint totalTokenDrops;
         address autoDistributionWallet;
@@ -335,8 +335,7 @@ library PoolLib {
 
         changeState(self, State.Paid);
 
-        uint feesPerEther = self.feeManager.getTotalFeesPerEther();
-        self.totalFees = (self.poolContributionBalance * feesPerEther) / 1 ether;
+        uint totalFees = (self.poolContributionBalance * self.feeManager.getTotalFeesPerEther()) / 1 ether;
         self.poolRemainingBalance = this.balance - self.poolContributionBalance;
 
         uint gasCosts = calcDistributionFees(60e9, self.totalContributors, self.totalTokenDrops);
@@ -347,7 +346,7 @@ library PoolLib {
             _presaleAddress.call.gas(
                 (gasLimit > 0) ? gasLimit : msg.gas
             ).value(
-                self.poolContributionBalance - self.totalFees - gasCosts
+                self.poolContributionBalance - totalFees - gasCosts
             )(data)
         );
     }
@@ -367,7 +366,6 @@ library PoolLib {
         onlyAdmins(self);
         require(self.state == State.Paid || self.state == State.Refund);
         require(self.expectedTokenAddress == address(0));
-        self.totalFees = 0;
         if (sender != self.refundSenderAddress) {
             self.refundSenderAddress = sender;
             ExpectingRefund(sender);
@@ -379,11 +377,11 @@ library PoolLib {
 
     function transferFees(PoolStorage storage self) public returns(uint) {
         canClaimTokens(self);
-        require(self.totalFees > 0);
-        uint amount = self.totalFees;
-        self.totalFees = 0;
-        FeesTransferred(amount);
-        return self.feeManager.sendFees.value(amount)();
+        require(!self.feesTransferred);
+        self.feesTransferred = true;
+        uint totalFees = (self.poolContributionBalance * self.feeManager.getTotalFeesPerEther()) / 1 ether;
+        FeesTransferred(totalFees);
+        return self.feeManager.sendFees.value(totalFees)();
     }
 
     function transferAndDistributeFees(PoolStorage storage self) public {
@@ -412,7 +410,8 @@ library PoolLib {
     }
 
     function withdrawAll(PoolStorage storage self) public {
-        if (self.state == State.Open) {
+        State currentState = self.state;
+        if (currentState == State.Open) {
             ParticipantState storage balance = self.balances[msg.sender];
             uint total = balance.remaining;
             if (total + balance.contribution == 0) {
@@ -441,25 +440,62 @@ library PoolLib {
             return;
         }
         require(
-            self.state == State.Refund || self.state == State.Failed || self.state == State.Paid
+            currentState == State.Refund || currentState == State.Failed || currentState == State.Paid
         );
+        uint feesPerEther = 0;
+        if (currentState == State.Paid) {
+            feesPerEther = self.feeManager.getTotalFeesPerEther();
+        }
 
         uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, self.totalTokenDrops);
-        uint totalPoolContributionLessGasCosts = self.poolContributionBalance - self.totalContributors * gasCostsPerRecipient;
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
+        uint netTotalPoolContribution = poolContributionBalance - totalFees - self.totalContributors * gasCostsPerRecipient;
+        uint feesAndRemaining = self.poolRemainingBalance;
+        // fees remain in the pool until tokens are confirmed
+        if (self.expectedTokenAddress == address(0)) {
+            feesAndRemaining += totalFees;
+        }
 
-        withdrawRemainingAndSurplus(self, msg.sender, gasCostsPerRecipient, totalPoolContributionLessGasCosts);
+        withdrawRemainingAndSurplus(
+            self,
+            msg.sender,
+            feesPerEther,
+            gasCostsPerRecipient,
+            this.balance - feesAndRemaining,
+            netTotalPoolContribution
+        );
     }
 
     function withdrawAllForMany(PoolStorage storage self, address[] recipients) public {
+        State currentState = self.state;
         require(
-            self.state == State.Refund || self.state == State.Failed || self.state == State.Paid
+            currentState == State.Refund || currentState == State.Failed || currentState == State.Paid
         );
+        uint feesPerEther = 0;
+        if (currentState == State.Paid) {
+            feesPerEther = self.feeManager.getTotalFeesPerEther();
+        }
 
         uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, self.totalTokenDrops);
-        uint totalPoolContributionLessGasCosts = self.poolContributionBalance - self.totalContributors * gasCostsPerRecipient;
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
+        uint netTotalPoolContribution = poolContributionBalance - totalFees - self.totalContributors * gasCostsPerRecipient;
+        uint feesAndRemaining = self.poolRemainingBalance;
+        // fees remain in the pool until tokens are confirmed
+        if (self.expectedTokenAddress == address(0)) {
+            feesAndRemaining += totalFees;
+        }
 
         for (uint i = 0; i < recipients.length; i++) {
-            withdrawRemainingAndSurplus(self, recipients[i], gasCostsPerRecipient, totalPoolContributionLessGasCosts);
+            withdrawRemainingAndSurplus(
+                self,
+                recipients[i],
+                feesPerEther,
+                gasCostsPerRecipient,
+                this.balance - feesAndRemaining,
+                netTotalPoolContribution
+            );
         }
     }
 
@@ -499,13 +535,33 @@ library PoolLib {
         canClaimTokens(self);
         uint tokenBalance = ERC20(tokenAddress).balanceOf(address(this));
         uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, self.totalTokenDrops);
-        uint totalPoolContributionLessGasCosts = self.poolContributionBalance - self.totalContributors * gasCostsPerRecipient;
+        uint feesPerEther = self.feeManager.getTotalFeesPerEther();
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
+        uint netTotalPoolContribution = poolContributionBalance - totalFees - self.totalContributors * gasCostsPerRecipient;
+        QuotaTracker.Data storage quotaTracker = self.tokenDeposits[tokenAddress];
 
         for (uint i = 0; i < self.participants.length; i++) {
+            address recipient = self.participants[i];
             if (tokenBalance > 0) {
-                tokenBalance = transferTokensToRecipient(self, tokenAddress, self.participants[i], tokenBalance, gasCostsPerRecipient, totalPoolContributionLessGasCosts);
+                uint share = calculateShare(
+                    quotaTracker,
+                    recipient,
+                    self.balances[recipient].contribution,
+                    feesPerEther,
+                    gasCostsPerRecipient,
+                    tokenBalance,
+                    netTotalPoolContribution
+                );
+                tokenBalance = transferTokensToRecipient(
+                    quotaTracker,
+                    tokenAddress,
+                    recipient,
+                    share,
+                    tokenBalance
+                );
             }
-            withdrawRemaining(self, self.participants[i]);
+            withdrawRemaining(self, recipient);
         }
     }
 
@@ -513,13 +569,33 @@ library PoolLib {
         canClaimTokens(self);
         uint tokenBalance = ERC20(tokenAddress).balanceOf(address(this));
         uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, self.totalTokenDrops);
-        uint totalPoolContributionLessGasCosts = self.poolContributionBalance - self.totalContributors * gasCostsPerRecipient;
+        uint feesPerEther = self.feeManager.getTotalFeesPerEther();
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
+        uint netTotalPoolContribution = poolContributionBalance - totalFees - self.totalContributors * gasCostsPerRecipient;
+        QuotaTracker.Data storage quotaTracker = self.tokenDeposits[tokenAddress];
 
         for (uint i = 0; i < recipients.length; i++) {
+            address recipient = recipients[i];
             if (tokenBalance > 0) {
-                tokenBalance = transferTokensToRecipient(self, tokenAddress, recipients[i], tokenBalance, gasCostsPerRecipient, totalPoolContributionLessGasCosts);
+                uint share = calculateShare(
+                    quotaTracker,
+                    recipient,
+                    self.balances[recipient].contribution,
+                    feesPerEther,
+                    gasCostsPerRecipient,
+                    tokenBalance,
+                    netTotalPoolContribution
+                );
+                tokenBalance = transferTokensToRecipient(
+                    quotaTracker,
+                    tokenAddress,
+                    recipient,
+                    share,
+                    tokenBalance
+                );
             }
-            withdrawRemaining(self, recipients[i]);
+            withdrawRemaining(self, recipient);
         }
     }
 
@@ -684,20 +760,19 @@ library PoolLib {
         self.state = desiredState;
     }
 
-    function withdrawRemainingAndSurplus(PoolStorage storage self, address recipient, uint gasCostsPerRecipient, uint totalPoolContributionLessGasCosts) public {
+    function withdrawRemainingAndSurplus(PoolStorage storage self, address recipient, uint feesPerEther, uint gasCostsPerRecipient, uint availableBalance, uint netTotalPoolContribution) public {
         ParticipantState storage balance = self.balances[recipient];
         uint total = balance.remaining;
-        uint numerator = balance.contribution;
-
-        if (numerator > 0) {
-            numerator -= gasCostsPerRecipient;
-        }
-
-        uint share = self.extraEtherDeposits.claimShare(
+        uint share = calculateShare(
+            self.extraEtherDeposits,
             recipient,
-            this.balance - self.totalFees - self.poolRemainingBalance,
-            [numerator, totalPoolContributionLessGasCosts]
+            balance.contribution,
+            feesPerEther,
+            gasCostsPerRecipient,
+            availableBalance,
+            netTotalPoolContribution
         );
+
         if (share == 0 && total == 0) {
             return;
         }
@@ -751,29 +826,36 @@ library PoolLib {
         );
     }
 
-    function transferTokensToRecipient(PoolStorage storage self, address tokenAddress, address recipient, uint tokenBalance, uint gasCostsPerRecipient, uint totalPoolContributionLessGasCosts) public returns(uint) {
-        ParticipantState storage balance = self.balances[recipient];
-        uint numerator = balance.contribution;
+    function transferTokensToRecipient(QuotaTracker.Data storage quotaTracker, address tokenAddress, address recipient, uint share, uint availableBalance) public returns(uint) {
+        if (share > 0) {
+            availableBalance -= share;
+            bool succeeded = ERC20(tokenAddress).transfer(recipient, share);
+            if (!succeeded) {
+                quotaTracker.undoClaim(recipient, share);
+                availableBalance += share;
+            }
 
-        if (numerator > 0) {
-            numerator -= gasCostsPerRecipient;
+            TokenTransfer(tokenAddress, recipient, share, succeeded, availableBalance);
+        }
+        return availableBalance;
+    }
+
+    function calculateShare(QuotaTracker.Data storage quotaTracker, address recipient, uint contribution, uint feesPerEther, uint gasCostsPerRecipient, uint availableBalance, uint netTotalPoolContribution) public returns(uint) {
+        uint numerator = contribution;
+        if (numerator == 0) {
+            return 0;
         }
 
-        uint share = self.tokenDeposits[tokenAddress].claimShare(
+        if (feesPerEther > 0) {
+            numerator -= (numerator * feesPerEther) / 1 ether;
+        }
+        numerator -= gasCostsPerRecipient;
+
+        return quotaTracker.claimShare(
             recipient,
-            tokenBalance,
-            [numerator, totalPoolContributionLessGasCosts]
+            availableBalance,
+            [numerator, netTotalPoolContribution]
         );
-
-        tokenBalance -= share;
-        bool succeeded = ERC20(tokenAddress).transfer(recipient, share);
-        if (!succeeded) {
-            self.tokenDeposits[tokenAddress].undoClaim(recipient, share);
-            tokenBalance += share;
-        }
-
-        TokenTransfer(tokenAddress, recipient, share, succeeded, tokenBalance);
-        return tokenBalance;
     }
 
     // Calculate the fees (ie gas cost) required for distribution

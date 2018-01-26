@@ -21,6 +21,7 @@ describe('Chaining pools', () => {
 	let TestToken;
 	let feeTeamMember;
 	let PresalePoolLib;
+	const poolFee = 0.005;
 
 	before(async () => {
 		let result = await server.setUp();
@@ -47,7 +48,7 @@ describe('Chaining pools', () => {
 			creator,
 			[
 				[feeTeamMember],
-				util.toWei(web3, 0.005, "ether"),
+				util.toWei(web3, poolFee, "ether"),
 				util.toWei(web3, 0.01, "ether")
 			]
 		);
@@ -191,20 +192,75 @@ describe('Chaining pools', () => {
 		const poolBalanceInWei = new BigNumber(util.toWei(web3, 3*0.995 + 17.5, 'ether'));
 		const zero = new BigNumber(0);
 
-		await util.tokenBalanceEquals(TestToken, buyer1,
-			util.getTokenShare(new BigNumber(util.toWei(web3, 5, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
-		await util.tokenBalanceEquals(TestToken, buyer2,
-			util.getTokenShare(new BigNumber(util.toWei(web3, 2.5, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
-		await util.tokenBalanceEquals(TestToken, buyer3,
-			util.getTokenShare(new BigNumber(util.toWei(web3, 10, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted));
+		await util.tokenBalanceEquals(
+			TestToken,
+			buyer1,
+			util.getTokenShare(
+				new BigNumber(util.toWei(web3, 5, 'ether')),
+				poolBalanceInWei,
+				poolFee,
+				zero,
+				4,
+				NumTestTokenNotFormatted
+			)
+		);
+		await util.tokenBalanceEquals(
+			TestToken,
+			buyer2,
+			util.getTokenShare(
+				new BigNumber(util.toWei(web3, 2.5, 'ether')),
+				poolBalanceInWei,
+				poolFee,
+				zero,
+				4,
+				NumTestTokenNotFormatted
+			)
+		);
+		await util.tokenBalanceEquals(
+			TestToken,
+			buyer3,
+			util.getTokenShare(
+				new BigNumber(util.toWei(web3, 10, 'ether')),
+				poolBalanceInWei,
+				poolFee,
+				zero,
+				4,
+				NumTestTokenNotFormatted
+			)
+		);
 
-		const shareTokensPool2 = util.getTokenShare(new BigNumber(util.toWei(web3, 3*0.995, 'ether')), poolBalanceInWei, zero, NumTestTokenNotFormatted);
+		const childPoolTokenShare = util.getTokenShare(
+			new BigNumber(util.toWei(web3, 3*0.995, 'ether')),
+			poolBalanceInWei,
+			poolFee,
+			zero,
+			4,
+			NumTestTokenNotFormatted
+		);
 		const pool2BalanceInWei = new BigNumber(util.toWei(web3, 3, 'ether'));
 
-		await util.tokenBalanceEquals(TestToken, buyer4,
-			util.getTokenShare(new BigNumber(util.toWei(web3, 1, 'ether')), pool2BalanceInWei, zero, shareTokensPool2));
+		await util.tokenBalanceEquals(
+			TestToken,
+			buyer4,
+			util.getTokenShare(
+				new BigNumber(util.toWei(web3, 1, 'ether')),
+				pool2BalanceInWei,
+				poolFee,
+				zero,
+				2,
+				childPoolTokenShare
+			)
+		);
 		await util.tokenBalanceEquals(TestToken, buyer5,
-			util.getTokenShare(new BigNumber(util.toWei(web3, 2, 'ether')), pool2BalanceInWei, zero, shareTokensPool2));
+			util.getTokenShare(
+				new BigNumber(util.toWei(web3, 2, 'ether')),
+				pool2BalanceInWei,
+				poolFee,
+				zero,
+				2,
+				childPoolTokenShare
+			)
+		);
 	});
 
 	it('distributes ether after cancellation', async () => {

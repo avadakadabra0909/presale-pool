@@ -21,7 +21,7 @@ describe('autoDistribute', () => {
 	let tokenHolder;
 	let blacklistedByToken;
 	let PresalePoolLib;
-	let poolFee = 0.005;
+	const poolFee = 0.005;
 
 	before(async () => {
 		let result = await server.setUp({total_accounts: 11});
@@ -51,7 +51,7 @@ describe('autoDistribute', () => {
 			creator,
 			[
 				[feeTeamMember],
-				util.toWei(web3, 0.005, "ether"),
+				util.toWei(web3, poolFee, "ether"),
 				util.toWei(web3, 0.01, "ether")
 			]
 		);
@@ -656,7 +656,7 @@ describe('autoDistribute', () => {
 				creator
 			);
 
-			// Contract should have 8000000
+			// Contract should have 1000
 			expect(await TestToken.methods.balanceOf(PresalePool.options.address).call())
 				.to.equal(NumTokensNotFormatted.toString(10));
 
@@ -675,27 +675,35 @@ describe('autoDistribute', () => {
 
 			const poolBalanceInWei = new BigNumber(util.toWei(web3, 3, 'ether').toString());
 			const gasCostPerContributor = new BigNumber(util.distributionGasCosts({ numContributors: 1, numDrops: totalTokenDrops }).toString());
-			const poolBalanceMinGasCost = poolBalanceInWei.sub(gasCost.toString());
 
-			let buyer1Share = util.getTokenShare(
-				util.toWei(web3, 1, 'ether'),
-				poolBalanceMinGasCost,
+			const buyer1TokenShare = util.getTokenShare(
+				new BigNumber(util.toWei(web3, 1, 'ether')),
+				poolBalanceInWei,
+				poolFee,
 				gasCostPerContributor,
-				NumTokensNotFormatted);
-			let buyer2Share = util.getTokenShare(
-				util.toWei(web3, 1.5, 'ether'),
-				poolBalanceMinGasCost,
+				3,
+				NumTokensNotFormatted
+			);
+			const buyer2TokenShare = util.getTokenShare(
+				new BigNumber(util.toWei(web3, 1.5, 'ether')),
+				poolBalanceInWei,
+				poolFee,
 				gasCostPerContributor,
-				NumTokensNotFormatted);
-			let buyer3Share = util.getTokenShare(
-				util.toWei(web3, 0.5, 'ether'),
-				poolBalanceMinGasCost,
+				3,
+				NumTokensNotFormatted
+			);
+			const buyer3TokenShare = util.getTokenShare(
+				new BigNumber(util.toWei(web3, 0.5, 'ether')),
+				poolBalanceInWei,
+				poolFee,
 				gasCostPerContributor,
-				NumTokensNotFormatted);
+				3,
+				NumTokensNotFormatted
+			);
 
-			await util.tokenBalanceEquals(TestToken, buyer1, buyer1Share);
-			await util.tokenBalanceEquals(TestToken, buyer2, buyer2Share);
-			await util.tokenBalanceEquals(TestToken, buyer3, buyer3Share);
+			await util.tokenBalanceEquals(TestToken, buyer1, buyer1TokenShare);
+			await util.tokenBalanceEquals(TestToken, buyer2, buyer2TokenShare);
+			await util.tokenBalanceEquals(TestToken, buyer3, buyer3TokenShare);
 		});
 	});
 });

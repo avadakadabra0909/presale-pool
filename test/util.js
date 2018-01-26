@@ -153,17 +153,24 @@ async function getBalances(PresalePool) {
 
 /**
  * @param contribution InWei
- * @param poolBalanceMinGasCost InWei
+ * @param poolContributionBalance InWei
+ * @param {Number} feePercentage
  * @param gasCostPerContributor InWei
- * @param NumTokens Not formatted (ie no decimal applied)
+ * @param {Number} numContributors
+ * @param totalTokensReceived total tokens received (without decimals)
  * @returns {BigNumber} The number of tokens received (not formatted)
  */
-function getTokenShare(contribution, poolBalanceMinGasCost, gasCostPerContributor, NumTokens) {
-    return new BigNumber(contribution)
-        .sub(gasCostPerContributor)
-        .div(poolBalanceMinGasCost)
-        .mul(NumTokens)
-        .round(0);
+function getTokenShare(contribution, poolContributionBalance, feePercentage, gasCostPerContributor, numContributors, totalTokensReceived) {
+    let numerator = contribution.sub(
+        contribution.mul(feePercentage).round(0)
+    )
+    .sub(gasCostPerContributor);
+
+    let denominator = poolContributionBalance.sub(
+        poolContributionBalance.mul(feePercentage).round(0)
+    ).sub(gasCostPerContributor.mul(numContributors));
+
+    return numerator.mul(totalTokensReceived).div(denominator).round(0);
 }
 
 /**

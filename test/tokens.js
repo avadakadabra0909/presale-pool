@@ -32,7 +32,7 @@ describe('confirmTokens', () => {
             creator,
             [
                 [feeTeamMember],
-                util.toWei(web3, 0.005, "ether"),
+                util.toWei(web3, poolFee, "ether"),
                 util.toWei(web3, 0.01, "ether")
             ]
         );
@@ -465,14 +465,45 @@ describe('confirmTokens', () => {
             });
 
             let NumTestTokenNotFormatted = new BigNumber("1000").mul(new BigNumber("10").pow(new BigNumber("18")));
+            const poolBalanceInWei = new BigNumber(util.toWei(web3, 3, 'ether'));
             const zero = new BigNumber(0);
 
-            await util.tokenBalanceEquals(TestToken, creator,
-                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, buyer1,
-                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, buyer2,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(
+                TestToken,
+                creator,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 2, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer1,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 1, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer2,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 0, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
 
 
             // send 10 more tokens
@@ -494,11 +525,39 @@ describe('confirmTokens', () => {
 
             let totalTokensSent = NumTestTokenNotFormatted.add(additionalTokensBN);
             await util.tokenBalanceEquals(TestToken, creator,
-                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 3, 'ether'), zero, totalTokensSent));
-            await util.tokenBalanceEquals(TestToken, buyer1,
-                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 3, 'ether'), zero, totalTokensSent));
-            await util.tokenBalanceEquals(TestToken, buyer2,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 3, 'ether'), zero, totalTokensSent));
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 2, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    totalTokensSent
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer1,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 1, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    totalTokensSent
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer2,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 0, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    totalTokensSent
+                )
+            );
 
             let expectedBalances = {};
             expectedBalances[creator] = {
@@ -545,14 +604,45 @@ describe('confirmTokens', () => {
             });
 
             let NumTestTokenNotFormatted = new BigNumber("1000").mul(new BigNumber("10").pow(new BigNumber("18")));
+            const poolBalanceInWei = new BigNumber(util.toWei(web3, 3, 'ether'));
             const zero = new BigNumber(0);
 
-            await util.tokenBalanceEquals(TestToken, creator,
-                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, buyer1,
-                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, buyer2,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(
+                TestToken,
+                creator,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 2, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer1,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 1, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer2,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 0, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
 
             // send 10 more tokens
             let additionalTokensBN = new BigNumber("10").mul(new BigNumber("10").pow(new BigNumber("18")));
@@ -577,11 +667,39 @@ describe('confirmTokens', () => {
 
             let totalTokensSent = NumTestTokenNotFormatted.add(additionalTokensBN);
             await util.tokenBalanceEquals(TestToken, creator,
-                util.getTokenShare(util.toWei(web3, 2, 'ether'), util.toWei(web3, 3, 'ether'), zero, totalTokensSent));
-            await util.tokenBalanceEquals(TestToken, buyer1,
-                util.getTokenShare(util.toWei(web3, 1, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, buyer2,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 3, 'ether'), zero, NumTestTokenNotFormatted));
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 2, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    totalTokensSent
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer1,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 1, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer2,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 0, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
 
 
             let expectedBalances = {};
@@ -662,18 +780,68 @@ describe('confirmTokens', () => {
             );
 
             let NumTestTokenNotFormatted = new BigNumber("1000").mul(new BigNumber("10").pow(new BigNumber("18")));
+            const poolBalanceInWei = new BigNumber(util.toWei(web3, 10, 'ether'));
             const zero = new BigNumber(0);
 
-            await util.tokenBalanceEquals(TestToken, creator,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, buyer1,
-                util.getTokenShare(util.toWei(web3, 5, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, buyer2,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, blacklistedBuyer,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, PresalePool.options.address,
-                util.getTokenShare(util.toWei(web3, 5, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(
+                TestToken,
+                creator,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 0, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer1,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 5, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer2,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 0, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted)
+                );
+            await util.tokenBalanceEquals(
+                TestToken,
+                blacklistedBuyer,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 0, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                PresalePool.options.address,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 5, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
 
             await util.methodWithGas(
                 PresalePool.methods.transferTokensToAll(
@@ -682,16 +850,66 @@ describe('confirmTokens', () => {
                 creator
             );
 
-            await util.tokenBalanceEquals(TestToken, creator,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, buyer1,
-                util.getTokenShare(util.toWei(web3, 5, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, buyer2,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, blacklistedBuyer,
-                util.getTokenShare(util.toWei(web3, 0, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
-            await util.tokenBalanceEquals(TestToken, PresalePool.options.address,
-                util.getTokenShare(util.toWei(web3, 5, 'ether'), util.toWei(web3, 10, 'ether'), zero, NumTestTokenNotFormatted));
+            await util.tokenBalanceEquals(
+                TestToken,
+                creator,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 0, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer1,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 5, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                buyer2,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 0, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                blacklistedBuyer,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 0, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
+            await util.tokenBalanceEquals(
+                TestToken,
+                PresalePool.options.address,
+                util.getTokenShare(
+                    new BigNumber(util.toWei(web3, 5, 'ether')),
+                    poolBalanceInWei,
+                    poolFee,
+                    zero,
+                    2,
+                    NumTestTokenNotFormatted
+                )
+            );
         });
     });
 });
