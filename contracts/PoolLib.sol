@@ -11,7 +11,7 @@ interface ERC20 {
 
 interface FeeManager {
     function create(uint recipientFeesPerEther, address recipient) public  returns(uint);
-    function discountFees(uint recipientFeesPerEther, uint teamFeesPerEther) public;
+    function discountFees(address member, uint recipientFeesPerEther, uint teamFeesPerEther) public;
     function sendFees() public payable returns(uint);
     function distributeFees(address contractAddress) public;
     function getTotalFeesPerEther() public returns(uint);
@@ -185,7 +185,7 @@ library PoolLib {
         uint256 code
     ) public {
         PoolRegistry p = PoolRegistry(0x123456789ABCDEF);
-        p.register(code);
+        p.register(msg.sender, code);
         self.admins.push(msg.sender);
         AddAdmin(msg.sender);
 
@@ -312,7 +312,6 @@ library PoolLib {
 
     function discountFees(PoolStorage storage self, uint recipientFeesPerEther, uint teamFeesPerEther) public {
         onState(self, State.Open);
-        require(msg.sender == tx.origin);
         // Ensure fees are only decreased and not increased
         require(
             self.feeManager.getTotalFeesPerEther() >= (recipientFeesPerEther + teamFeesPerEther)
@@ -322,7 +321,7 @@ library PoolLib {
             recipientFeesPerEther,
             address(self.feeManager)
         );
-        self.feeManager.discountFees(recipientFeesPerEther, teamFeesPerEther);
+        self.feeManager.discountFees(msg.sender, recipientFeesPerEther, teamFeesPerEther);
     }
 
     // Allow admin to send the pool contributions to a wallet or contract (minus fees and auto distrib gas cost)

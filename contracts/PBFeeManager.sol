@@ -144,14 +144,16 @@ contract PBFeeManager {
         return fees.recipientFraction[1];
     }
 
-    function discountFees(uint recipientFeesPerEther, uint teamFeesPerEther) external {
-        require(Util.contains(teamMembers, tx.origin));
+    function discountFees(address member, uint recipientFeesPerEther, uint teamFeesPerEther) external {
+        require(Util.contains(teamMembers, member));
         Fees storage fees = feesForContract[msg.sender];
         // require that fees haven't already been collected
         require(fees.amount == 0);
         // require that fees is initialized
         require(fees.recipientFraction[1] > 0);
 
+        require(recipientFeesPerEther <= fees.recipientFraction[1]);
+        require(teamFeesPerEther <= fees.recipientFraction[1]);
         require((recipientFeesPerEther + teamFeesPerEther) <= fees.recipientFraction[1]);
 
         fees.recipientFraction = [
