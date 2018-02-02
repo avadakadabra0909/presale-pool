@@ -24,6 +24,7 @@ library PoolLib {
     struct ParticipantState {
         uint contribution;
         uint remaining;
+        bool admin;
         bool whitelisted;
         bool exists;
     }
@@ -160,7 +161,7 @@ library PoolLib {
     );
 
     function onlyAdmins(PoolStorage storage self) public view {
-        require(Util.contains(self.admins, msg.sender));
+        require(self.balances[msg.sender].admin);
     }
 
     function onState(PoolStorage storage self, State s) public view {
@@ -186,8 +187,6 @@ library PoolLib {
     ) public {
         PoolRegistry p = PoolRegistry(0x123456789ABCDEF);
         p.register(msg.sender, code);
-        self.admins.push(msg.sender);
-        AddAdmin(msg.sender);
 
         self.feeManager = FeeManager(_feeManager);
         FeeInstalled(
@@ -220,12 +219,15 @@ library PoolLib {
         }
 
         self.balances[msg.sender].whitelisted = true;
+        self.balances[msg.sender].admin = true;
+        AddAdmin(msg.sender);
 
         for (uint i = 0; i < _admins.length; i++) {
             address admin = _admins[i];
             AddAdmin(admin);
             self.admins.push(admin);
             self.balances[admin].whitelisted = true;
+            self.balances[admin].admin = true;
         }
     }
 
@@ -666,8 +668,6 @@ library PoolLib {
         bool rebalanceForAll = (self.minContribution < _minContribution);
         // we lowered the maxContribution threshold
         rebalanceForAll = rebalanceForAll || (self.maxContribution > _maxContribution);
-        // we want to make maxPoolBalance lower than the current pool balance
-        rebalanceForAll = rebalanceForAll || (self.poolContributionBalance > _maxPoolBalance);
 
         self.minContribution = _minContribution;
         self.maxContribution = _maxContribution;
@@ -693,6 +693,36 @@ library PoolLib {
                 if (balance.contribution > 0) {
                     self.poolContributionBalance += balance.contribution;
                     self.totalContributors++;
+                }
+
+                ContributionAdjusted(
+                    participant,
+                    balance.remaining,
+                    balance.contribution,
+                    self.poolContributionBalance
+                );
+            }
+        } else if (self.poolContributionBalance > self.maxPoolBalance) {
+            for (i = self.participants.length - 1; i >= 0 && self.poolContributionBalance > self.maxPoolBalance; i--) {
+                participant = self.participants[i];
+                balance = self.balances[participant];
+
+                if (balance.contribution == 0) {
+                    continue;
+                }
+
+
+                balance.remaining += balance.contribution;
+                self.poolContributionBalance -= balance.contribution;
+                balance.contribution = 0;
+                self.totalContributors--;
+
+                if (self.poolContributionBalance < self.maxPoolBalance) {
+                    (balance.contribution, balance.remaining) = getContribution(self, participant, 0);
+                    if (balance.contribution > 0) {
+                        self.poolContributionBalance += balance.contribution;
+                        self.totalContributors++;
+                    }
                 }
 
                 ContributionAdjusted(
@@ -886,7 +916,9 @@ library PoolLib {
             return (0, total);
         }
 
-        contribution = Util.min(self.maxContribution, contribution);
+        if (!balance.admin) {
+            contribution = Util.min(self.maxContribution, contribution);
+        }
         contribution = Util.min(self.maxPoolBalance - self.poolContributionBalance + balance.contribution, contribution);
         if (contribution < self.minContribution) {
             return (0, total);
