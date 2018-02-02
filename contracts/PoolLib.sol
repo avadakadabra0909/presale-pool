@@ -234,15 +234,23 @@ library PoolLib {
     function deposit(PoolStorage storage self) public {
         onState(self, State.Open);
         require(msg.value > 0);
-        require(included(self, msg.sender));
+        ParticipantState storage balance = self.balances[msg.sender];
+        require(included(self, balance));
 
         uint newContribution;
         uint newRemaining;
-        (newContribution, newRemaining) = getContribution(self, msg.sender, msg.value);
+
+        (newContribution, newRemaining) = getContribution(
+            self.minContribution,
+            self.maxContribution,
+            self.maxPoolBalance,
+            self.poolContributionBalance,
+            balance,
+            msg.value
+        );
         // must respect the maxContribution and maxPoolBalance limits
         require(newRemaining == 0);
 
-        ParticipantState storage balance = self.balances[msg.sender];
         if (balance.contribution == 0) {
             self.totalContributors++;
         }
@@ -607,10 +615,16 @@ library PoolLib {
             WhitelistEnabled();
             self.restricted = true;
         }
-        uint i = 0;
+        uint i;
+        uint minContribution = self.minContribution;
+        uint maxContribution = self.maxContribution;
+        uint maxPoolBalance = self.maxPoolBalance;
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalContributors = self.totalContributors;
+        address participant;
 
         for (i = 0; i < toExclude.length; i++) {
-            address participant = toExclude[i];
+            participant = toExclude[i];
             ParticipantState storage balance = self.balances[participant];
 
             if (balance.whitelisted) {
@@ -618,23 +632,35 @@ library PoolLib {
                 RemovedFromWhitelist(participant);
 
                 if (balance.contribution > 0) {
-                    self.totalContributors--;
-                    self.poolContributionBalance -= balance.contribution;
+                    totalContributors--;
+                    poolContributionBalance -= balance.contribution;
                     balance.remaining += balance.contribution;
                     balance.contribution = 0;
                     ContributionAdjusted(
                         participant,
                         balance.remaining,
                         balance.contribution,
-                        self.poolContributionBalance
+                        poolContributionBalance
                     );
                 }
             }
         }
 
         for (i = 0; i < toInclude.length; i++) {
-            includeInWhitelist(self, toInclude[i]);
+            participant = toInclude[i];
+            (poolContributionBalance, totalContributors) = includeInWhitelist(
+                self.balances[participant],
+                participant,
+                minContribution,
+                maxContribution,
+                maxPoolBalance,
+                poolContributionBalance,
+                totalContributors
+            );
         }
+
+        self.poolContributionBalance = poolContributionBalance;
+        self.totalContributors = totalContributors;
     }
 
     function removeWhitelist(PoolStorage storage self) public {
@@ -644,9 +670,27 @@ library PoolLib {
         self.restricted = false;
         WhitelistDisabled();
 
+        uint minContribution = self.minContribution;
+        uint maxContribution = self.maxContribution;
+        uint maxPoolBalance = self.maxPoolBalance;
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalContributors = self.totalContributors;
+
         for (uint i = 0; i < self.participants.length; i++) {
-            includeInWhitelist(self, self.participants[i]);
+            address participant = self.participants[i];
+            (poolContributionBalance, totalContributors) = includeInWhitelist(
+                self.balances[participant],
+                participant,
+                minContribution,
+                maxContribution,
+                maxPoolBalance,
+                poolContributionBalance,
+                totalContributors
+            );
         }
+
+        self.poolContributionBalance = poolContributionBalance;
+        self.totalContributors = totalContributors;
     }
 
     function setTokenDrops(PoolStorage storage self, uint _totalTokenDrops) public {
@@ -674,36 +718,16 @@ library PoolLib {
         self.maxPoolBalance = _maxPoolBalance;
 
         validatePoolSettings(self);
-        ContributionSettingsChanged(self.minContribution, self.maxContribution, self.maxPoolBalance);
+        ContributionSettingsChanged(_minContribution, _maxContribution, _maxPoolBalance);
 
 
         uint i;
         ParticipantState storage balance;
         address participant;
+        uint poolContributionBalance;
+        uint totalContributors;
         if (rebalanceForAll) {
-            self.poolContributionBalance = 0;
-            self.totalContributors = 0;
             for (i = 0; i < self.participants.length; i++) {
-                participant = self.participants[i];
-                balance = self.balances[participant];
-
-                balance.remaining += balance.contribution;
-                balance.contribution = 0;
-                (balance.contribution, balance.remaining) = getContribution(self, participant, 0);
-                if (balance.contribution > 0) {
-                    self.poolContributionBalance += balance.contribution;
-                    self.totalContributors++;
-                }
-
-                ContributionAdjusted(
-                    participant,
-                    balance.remaining,
-                    balance.contribution,
-                    self.poolContributionBalance
-                );
-            }
-        } else if (self.poolContributionBalance > self.maxPoolBalance) {
-            for (i = self.participants.length - 1; i >= 0 && self.poolContributionBalance > self.maxPoolBalance; i--) {
                 participant = self.participants[i];
                 balance = self.balances[participant];
 
@@ -711,17 +735,57 @@ library PoolLib {
                     continue;
                 }
 
+                balance.remaining += balance.contribution;
+                balance.contribution = 0;
+                (balance.contribution, balance.remaining) = getContribution(
+                    _minContribution,
+                    _maxContribution,
+                    _maxPoolBalance,
+                    poolContributionBalance,
+                    balance,
+                    0
+                );
+                if (balance.contribution > 0) {
+                    poolContributionBalance += balance.contribution;
+                    totalContributors++;
+                }
+
+                ContributionAdjusted(
+                    participant,
+                    balance.remaining,
+                    balance.contribution,
+                    poolContributionBalance
+                );
+            }
+        } else if (self.poolContributionBalance > self.maxPoolBalance) {
+            poolContributionBalance = self.poolContributionBalance;
+            totalContributors = self.totalContributors;
+
+            for (i = self.participants.length - 1; i >= 0 && poolContributionBalance > _maxPoolBalance; i--) {
+                participant = self.participants[i];
+                balance = self.balances[participant];
+
+                if (balance.contribution == 0) {
+                    continue;
+                }
 
                 balance.remaining += balance.contribution;
-                self.poolContributionBalance -= balance.contribution;
+                poolContributionBalance -= balance.contribution;
                 balance.contribution = 0;
-                self.totalContributors--;
+                totalContributors--;
 
-                if (self.poolContributionBalance < self.maxPoolBalance) {
-                    (balance.contribution, balance.remaining) = getContribution(self, participant, 0);
+                if (poolContributionBalance < _maxPoolBalance) {
+                    (balance.contribution, balance.remaining) = getContribution(
+                        _minContribution,
+                        _maxContribution,
+                        _maxPoolBalance,
+                        poolContributionBalance,
+                        balance,
+                        0
+                    );
                     if (balance.contribution > 0) {
-                        self.poolContributionBalance += balance.contribution;
-                        self.totalContributors++;
+                        poolContributionBalance += balance.contribution;
+                        totalContributors++;
                     }
                 }
 
@@ -729,22 +793,37 @@ library PoolLib {
                     participant,
                     balance.remaining,
                     balance.contribution,
-                    self.poolContributionBalance
+                    poolContributionBalance
                 );
             }
         } else {
+            poolContributionBalance = self.poolContributionBalance;
+            totalContributors = self.totalContributors;
+
             for (i = 0; i < toRebalance.length; i++) {
                 participant = toRebalance[i];
                 balance = self.balances[participant];
 
+                if (!included(self, balance)) {
+                    continue;
+                }
+
                 uint newContribution;
                 uint newRemaining;
-                (newContribution, newRemaining) = getContribution(self, participant, 0);
-                self.poolContributionBalance = self.poolContributionBalance - balance.contribution + newContribution;
+                (newContribution, newRemaining) = getContribution(
+                    _minContribution,
+                    _maxContribution,
+                    _maxPoolBalance,
+                    poolContributionBalance,
+                    balance,
+                    0
+                );
+
+                poolContributionBalance = poolContributionBalance - balance.contribution + newContribution;
                 if (newContribution > 0 && balance.contribution == 0) {
-                    self.totalContributors++;
+                    totalContributors++;
                 } else if (newContribution == 0 && balance.contribution > 0) {
-                    self.totalContributors--;
+                    totalContributors--;
                 }
                 (balance.contribution, balance.remaining) = (newContribution, newRemaining);
 
@@ -752,36 +831,47 @@ library PoolLib {
                     participant,
                     balance.remaining,
                     balance.contribution,
-                    self.poolContributionBalance
+                    poolContributionBalance
                 );
             }
         }
+
+        self.poolContributionBalance = poolContributionBalance;
+        self.totalContributors = totalContributors;
     }
 
-    function includeInWhitelist(PoolStorage storage self, address participant) public {
-        ParticipantState storage balance = self.balances[participant];
-
+    function includeInWhitelist(ParticipantState storage balance, address participant, uint minContribution, uint maxContribution, uint maxPoolBalance, uint poolContributionBalance, uint totalContributors) public returns (uint, uint) {
         if (balance.whitelisted) {
-            return;
+            return (poolContributionBalance, totalContributors);
         }
 
         balance.whitelisted = true;
         IncludedInWhitelist(participant);
         if (balance.remaining == 0) {
-            return;
+            return (poolContributionBalance, totalContributors);
         }
 
-        (balance.contribution, balance.remaining) = getContribution(self, participant, 0);
+        (balance.contribution, balance.remaining) = getContribution(
+            minContribution,
+            maxContribution,
+            maxPoolBalance,
+            poolContributionBalance,
+            balance,
+            0
+        );
+
         if (balance.contribution > 0) {
-            self.totalContributors++;
-            self.poolContributionBalance += balance.contribution;
+            totalContributors++;
+            poolContributionBalance += balance.contribution;
             ContributionAdjusted(
                 participant,
                 balance.remaining,
                 balance.contribution,
-                self.poolContributionBalance
+                poolContributionBalance
             );
         }
+
+        return (poolContributionBalance, totalContributors);
     }
 
     function changeState(PoolStorage storage self, State desiredState) public {
@@ -904,23 +994,19 @@ library PoolLib {
         require(self.minContribution >= 2 * gasCosts);
     }
 
-    function included(PoolStorage storage self, address participant) public constant returns (bool) {
-        return !self.restricted || self.balances[participant].whitelisted;
+    function included(PoolStorage storage self, ParticipantState storage balance) public constant returns (bool) {
+        return !self.restricted || balance.whitelisted;
     }
 
-    function getContribution(PoolStorage storage self, address participant, uint amount) public constant returns (uint, uint) {
-        ParticipantState storage balance = self.balances[participant];
+    function getContribution(uint minContribution, uint maxContribution, uint maxPoolBalance, uint poolContributionBalance,  ParticipantState storage balance, uint amount) public constant returns (uint, uint) {
         uint total = balance.remaining + balance.contribution + amount;
         uint contribution = total;
-        if (!included(self, participant)) {
-            return (0, total);
-        }
 
         if (!balance.admin) {
-            contribution = Util.min(self.maxContribution, contribution);
+            contribution = Util.min(maxContribution, contribution);
         }
-        contribution = Util.min(self.maxPoolBalance - self.poolContributionBalance + balance.contribution, contribution);
-        if (contribution < self.minContribution) {
+        contribution = Util.min(maxPoolBalance - poolContributionBalance + balance.contribution, contribution);
+        if (contribution < minContribution) {
             return (0, total);
         }
         return (contribution, total - contribution);
