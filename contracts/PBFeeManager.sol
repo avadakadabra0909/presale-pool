@@ -154,13 +154,14 @@ contract PBFeeManager {
 
         require(recipientFeesPerEther <= fees.recipientFraction[1]);
         require(teamFeesPerEther <= fees.recipientFraction[1]);
-        require((recipientFeesPerEther + teamFeesPerEther) <= fees.recipientFraction[1]);
+
+        uint denominator = recipientFeesPerEther + teamFeesPerEther;
+        require(denominator <= fees.recipientFraction[1]);
 
         fees.recipientFraction = [
             // numerator
             recipientFeesPerEther,
-            // denominator
-            recipientFeesPerEther + teamFeesPerEther
+            denominator
         ];
     }
 
