@@ -266,7 +266,7 @@ async function tokenBalanceEquals(contract, address, amount) {
 function distributionGasCosts(options) {
     let { numContributors, numDrops, gasPriceGwei } = options;
     if (gasPriceGwei == null) {
-        gasPriceGwei = 60 * Math.pow(10, 9);
+        gasPriceGwei = 40 * Math.pow(10, 9);
     } else {
         gasPriceGwei *= Math.pow(10, 9);
     }
