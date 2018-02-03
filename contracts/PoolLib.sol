@@ -221,21 +221,20 @@ library PoolLib {
             WhitelistEnabled();
         }
 
-        self.pStates[msg.sender].whitelisted = true;
-        self.pStates[msg.sender].admin = true;
-        // Add creator to participants list so that he will have the priority during contribution balancing
-        self.participants.push(msg.sender);
-        AddAdmin(msg.sender);
+        addAdmin(self, msg.sender);
 
         for (uint i = 0; i < _admins.length; i++) {
-            address admin = _admins[i];
-            AddAdmin(admin);
-            self.admins.push(admin);
-            self.pStates[admin].whitelisted = true;
-            self.pStates[admin].admin = true;
-            // Add admin to participants list so that he will have the priority during contribution balancing
-            self.participants.push(admin);
+            addAdmin(self, _admins[i]);
         }
+    }
+
+    function addAdmin(PoolStorage storage self, address admin) internal {
+        self.pStates[admin].whitelisted = true;
+        self.pStates[admin].admin = true;
+        self.pStates[admin].exists = true;
+        // Add creator to participants list so that he will have the priority during contribution balancing
+        self.participants.push(admin);
+        AddAdmin(admin);
     }
 
     function deposit(PoolStorage storage self) public {
