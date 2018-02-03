@@ -270,6 +270,85 @@ describe('setContributionSettings()', () => {
         await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 15, "ether"));
     });
 
+    it("rebalances when maxPoolBalance is decreased - admin contribution has priority", async () => {
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer1,
+            util.toWei(web3, 5, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            buyer2,
+            util.toWei(web3, 5, "ether")
+        );
+        await util.methodWithGas(
+            PresalePool.methods.deposit(),
+            creator,
+            util.toWei(web3, 5, "ether")
+        );
+
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(
+                0,
+                util.toWei(web3, 15, "ether"),
+                util.toWei(web3, 15, "ether"),
+                []
+            ),
+            creator
+        );
+
+        let expectedBalances = {};
+        expectedBalances[buyer1] = {
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 5, "ether")
+        };
+        expectedBalances[buyer2] = {
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 5, "ether")
+        };
+        expectedBalances[creator] = {
+            remaining: util.toWei(web3, 0, "ether"),
+            contribution: util.toWei(web3, 5, "ether")
+        };
+        await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 15, "ether"));
+
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(
+                0,
+                util.toWei(web3, 11, "ether"),
+                util.toWei(web3, 11, "ether"),
+                []
+            ),
+            creator
+        );
+
+        expectedBalances[buyer2] = {
+            remaining: util.toWei(web3, 4, "ether"),
+            contribution: util.toWei(web3, 1, "ether")
+        };
+        await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 15, "ether"));
+
+        await util.methodWithGas(
+            PresalePool.methods.setContributionSettings(
+                0,
+                util.toWei(web3, 6, "ether"),
+                util.toWei(web3, 6, "ether"),
+                []
+            ),
+            creator
+        );
+
+        expectedBalances[buyer1] = {
+            remaining: util.toWei(web3, 4, "ether"),
+            contribution: util.toWei(web3, 1, "ether")
+        };
+        expectedBalances[buyer2] = {
+            remaining: util.toWei(web3, 5, "ether"),
+            contribution: util.toWei(web3, 0, "ether")
+        };
+        await util.verifyState(web3, PresalePool, expectedBalances, util.toWei(web3, 15, "ether"));
+    });
+
     it("rebalances when maxPoolBalance is decreased and is combined with minContribution", async () => {
         await util.methodWithGas(
             PresalePool.methods.deposit(),
