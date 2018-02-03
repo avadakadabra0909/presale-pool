@@ -126,7 +126,14 @@ describe('deploy', () => {
             PresalePool.options.address
         );
         expect(poolBalance).to.equal(util.toWei(web3, "0", "ether"));
-        expect(await util.getBalances(PresalePool)).to.deep.equal({});
+        let balances = await util.getBalances(PresalePool);
+        let filtered = {};
+        Object.keys(balances).forEach((addr) => {
+            if (parseInt(balances[addr].contribution) > 0) {
+                filtered[addr] = balances[addr];
+            }
+        });
+        expect(filtered).to.deep.equal({});
     });
 
     it('cant be deployed with balance', async () => {
