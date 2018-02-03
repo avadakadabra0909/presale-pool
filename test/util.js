@@ -42,6 +42,11 @@ function compileContract(contractName, registryContract) {
     let result = solc.compile(
         { sources: input }, 1, findImports
     );
+
+    if(result.errors && result.errors.length > 0) {
+        console.log(result.errors);
+    }
+
     let compiledContract = result.contracts[`${contractName}:${contractName}`];
     if (contractName !== "PoolLib") {
         compileCache[contractName] = compiledContract;
