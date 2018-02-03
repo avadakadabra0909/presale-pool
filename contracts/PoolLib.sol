@@ -231,8 +231,8 @@ library PoolLib {
     function addAdmin(PoolStorage storage self, address admin) internal {
         self.pStates[admin].whitelisted = true;
         self.pStates[admin].admin = true;
-        self.pStates[admin].exists = true;
         // Add creator to participants list so that he will have the priority during contribution balancing
+        self.pStates[admin].exists = true;
         self.participants.push(admin);
         AddAdmin(admin);
     }
