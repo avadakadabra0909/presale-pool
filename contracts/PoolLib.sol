@@ -223,6 +223,8 @@ library PoolLib {
 
         self.pStates[msg.sender].whitelisted = true;
         self.pStates[msg.sender].admin = true;
+        // Add creator to participants list so that he will have the priority during contribution balancing
+        self.participants.push(msg.sender);
         AddAdmin(msg.sender);
 
         for (uint i = 0; i < _admins.length; i++) {
@@ -231,6 +233,8 @@ library PoolLib {
             self.admins.push(admin);
             self.pStates[admin].whitelisted = true;
             self.pStates[admin].admin = true;
+            // Add admin to participants list so that he will have the priority during contribution balancing
+            self.participants.push(admin);
         }
     }
 
