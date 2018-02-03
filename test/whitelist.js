@@ -8,8 +8,8 @@ const expect = chai.expect;
 describe('whitelist', () => {
     let creator;
     let buyer1;
-	let buyer2;
-	let buyer3;
+    let buyer2;
+    let buyer3;
     let web3;
     let PBFeeManager;
     let PresalePoolLib;

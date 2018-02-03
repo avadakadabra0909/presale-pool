@@ -1,29 +1,33 @@
-pragma solidity ^0.4.15;
+pragma solidity 0.4.19;
 
 import "./Util.sol";
 import "./QuotaTracker.sol";
 import "./PoolRegistry.sol";
 
 interface ERC20 {
-    function transfer(address _to, uint _value) returns (bool success);
-    function balanceOf(address _owner) constant returns (uint balance);
+    function transfer(address _to, uint _value) public returns (bool success);
+    function balanceOf(address _owner) constant public  returns (uint balance);
 }
 
 interface FeeManager {
-    function create(uint recipientFeesPerEther, address recipient) returns(uint);
-    function discountFees(uint recipientFeesPerEther, uint teamFeesPerEther);
-    function sendFees() payable returns(uint);
-    function distributeFees(address contractAddress);
-    function getTotalFeesPerEther() returns(uint);
+    function create(uint recipientFeesPerEther, address recipient) public  returns(uint);
+    function discountFees(address member, uint recipientFeesPerEther, uint teamFeesPerEther) public;
+    function sendFees() public payable returns(uint);
+    function distributeFees(address contractAddress) public;
+    function getTotalFeesPerEther() public returns(uint);
 }
 
 library PoolLib {
     using QuotaTracker for QuotaTracker.Data;
 
+    uint private constant gasPriceDistribution = 40e9;
+
     enum State { Open, Failed, Paid, Refund }
+
     struct ParticipantState {
         uint contribution;
         uint remaining;
+        bool admin;
         bool whitelisted;
         bool exists;
     }
@@ -41,7 +45,7 @@ library PoolLib {
 
         bool restricted;
 
-        mapping (address => ParticipantState) balances;
+        mapping (address => ParticipantState) pStates;
         uint poolContributionBalance;
         uint poolRemainingBalance;
         uint totalContributors;
@@ -53,7 +57,7 @@ library PoolLib {
         address expectedTokenAddress;
 
         FeeManager feeManager;
-        uint totalFees;
+        bool feesTransferred;
 
         uint totalTokenDrops;
         address autoDistributionWallet;
@@ -159,15 +163,15 @@ library PoolLib {
         address _admin
     );
 
-    function onlyAdmins(PoolStorage storage self) {
-        require(Util.contains(self.admins, msg.sender));
+    function onlyAdmins(PoolStorage storage self) public view {
+        require(self.pStates[msg.sender].admin);
     }
 
-    function onState(PoolStorage storage self, State s) {
+    function onState(PoolStorage storage self, State s) public view {
         require(self.state == s);
     }
 
-    function canClaimTokens(PoolStorage storage self) {
+    function canClaimTokens(PoolStorage storage self) public view {
         require(self.state == State.Paid && self.expectedTokenAddress != address(0));
     }
 
@@ -183,11 +187,9 @@ library PoolLib {
         uint _totalTokenDrops,
         address _autoDistributionWallet,
         uint256 code
-    ) {
+    ) public {
         PoolRegistry p = PoolRegistry(0x123456789ABCDEF);
-        p.register(code);
-        self.admins.push(msg.sender);
-        AddAdmin(msg.sender);
+        p.register(msg.sender, code);
 
         self.feeManager = FeeManager(_feeManager);
         FeeInstalled(
@@ -199,7 +201,7 @@ library PoolLib {
         self.totalTokenDrops = _totalTokenDrops;
         self.autoDistributionWallet = _autoDistributionWallet;
         AutoDistributionConfigured(
-            60e9,
+            gasPriceDistribution,
             _totalTokenDrops,
             _autoDistributionWallet
         );
@@ -219,50 +221,64 @@ library PoolLib {
             WhitelistEnabled();
         }
 
-        self.balances[msg.sender].whitelisted = true;
+        addAdmin(self, msg.sender);
 
         for (uint i = 0; i < _admins.length; i++) {
-            address admin = _admins[i];
-            AddAdmin(admin);
-            self.admins.push(admin);
-            self.balances[admin].whitelisted = true;
+            addAdmin(self, _admins[i]);
         }
     }
 
-    function deposit(PoolStorage storage self) {
+    function addAdmin(PoolStorage storage self, address admin) internal {
+        self.pStates[admin].whitelisted = true;
+        self.pStates[admin].admin = true;
+        // Add creator to participants list so that he will have the priority during contribution balancing
+        self.pStates[admin].exists = true;
+        self.participants.push(admin);
+        AddAdmin(admin);
+    }
+
+    function deposit(PoolStorage storage self) public {
         onState(self, State.Open);
         require(msg.value > 0);
-        require(included(self, msg.sender));
+        ParticipantState storage pState = self.pStates[msg.sender];
+        require(included(self, pState));
 
         uint newContribution;
         uint newRemaining;
-        (newContribution, newRemaining) = getContribution(self, msg.sender, msg.value);
+
+        (newContribution, newRemaining) = getContribution(
+            self.minContribution,
+            self.maxContribution,
+            self.maxPoolBalance,
+            self.poolContributionBalance,
+            pState,
+            msg.value
+        );
         // must respect the maxContribution and maxPoolBalance limits
         require(newRemaining == 0);
 
-        ParticipantState storage balance = self.balances[msg.sender];
-        if (balance.contribution == 0) {
+        if (pState.contribution == 0) {
             self.totalContributors++;
         }
 
-        self.poolContributionBalance = self.poolContributionBalance - balance.contribution + newContribution;
-        (balance.contribution, balance.remaining) = (newContribution, newRemaining);
+        self.poolContributionBalance = self.poolContributionBalance - pState.contribution + newContribution;
+        (pState.contribution, pState.remaining) = (newContribution, newRemaining);
 
-        if (!balance.exists) {
-            balance.whitelisted = true;
-            balance.exists = true;
+        if (!pState.exists) {
+            pState.whitelisted = true;
+            pState.exists = true;
             self.participants.push(msg.sender);
         }
-        Deposit(msg.sender, msg.value, balance.contribution, self.poolContributionBalance);
+        Deposit(msg.sender, msg.value, pState.contribution, self.poolContributionBalance);
     }
 
-    function refund(PoolStorage storage self) {
+    function refund(PoolStorage storage self) public {
         onState(self, State.Refund);
         require(msg.sender == self.refundSenderAddress);
         RefundReceived(msg.sender, msg.value);
     }
 
-    function airdropEther(PoolStorage storage self, uint gasPrice, address autoDistributionWallet) {
+    function airdropEther(PoolStorage storage self, uint gasPrice, address autoDistributionWallet) public {
         require(msg.value > 0);
         canClaimTokens(self);
         uint gasCosts = calcDistributionFees(gasPrice, self.totalContributors, 1);
@@ -273,7 +289,7 @@ library PoolLib {
         }
     }
 
-    function airdropTokens(PoolStorage storage self, address tokenAddress, uint gasPrice, address autoDistributionWallet) {
+    function airdropTokens(PoolStorage storage self, address tokenAddress, uint gasPrice, address autoDistributionWallet) public {
         canClaimTokens(self);
         ERC20 tokenContract = ERC20(tokenAddress);
         require(tokenContract.balanceOf(address(this)) > 0);
@@ -284,19 +300,19 @@ library PoolLib {
         autoDistributionWallet.transfer(msg.value);
     }
 
-    function fail(PoolStorage storage self) {
+    function fail(PoolStorage storage self) public {
         onlyAdmins(self);
         onState(self, State.Open);
         changeState(self, State.Failed);
         self.poolRemainingBalance = this.balance - self.poolContributionBalance;
         if (self.totalTokenDrops > 0) {
             self.totalTokenDrops = 1;
-            uint gasCosts = calcDistributionFees(60e9, self.totalContributors, 1);
+            uint gasCosts = calcDistributionFees(gasPriceDistribution, self.totalContributors, 1);
             self.autoDistributionWallet.transfer(gasCosts);
         }
     }
 
-    function tokenFallback(PoolStorage storage self, address _from, uint _value, bytes _data) {
+    function tokenFallback(PoolStorage storage self, address _from, uint _value, bytes _data) public {
         onState(self, State.Paid);
         ERC223TokensReceived(
             msg.sender,
@@ -306,13 +322,12 @@ library PoolLib {
         );
     }
 
-    function version() pure returns (uint, uint, uint) {
-        return (2, 0, 2);
+    function version() public pure returns (uint, uint, uint) {
+        return (2, 0, 3);
     }
 
-    function discountFees(PoolStorage storage self, uint recipientFeesPerEther, uint teamFeesPerEther) {
+    function discountFees(PoolStorage storage self, uint recipientFeesPerEther, uint teamFeesPerEther) public {
         onState(self, State.Open);
-        require(msg.sender == tx.origin);
         // Ensure fees are only decreased and not increased
         require(
             self.feeManager.getTotalFeesPerEther() >= (recipientFeesPerEther + teamFeesPerEther)
@@ -322,11 +337,11 @@ library PoolLib {
             recipientFeesPerEther,
             address(self.feeManager)
         );
-        self.feeManager.discountFees(recipientFeesPerEther, teamFeesPerEther);
+        self.feeManager.discountFees(msg.sender, recipientFeesPerEther, teamFeesPerEther);
     }
 
     // Allow admin to send the pool contributions to a wallet or contract (minus fees and auto distrib gas cost)
-    function payToPresale(PoolStorage storage self, address _presaleAddress, uint minPoolBalance, uint gasLimit, bytes data) {
+    function payToPresale(PoolStorage storage self, address _presaleAddress, uint minPoolBalance, uint gasLimit, bytes data) public {
         onlyAdmins(self);
         onState(self, State.Open);
         require(self.poolContributionBalance > 0);
@@ -335,11 +350,10 @@ library PoolLib {
 
         changeState(self, State.Paid);
 
-        uint feesPerEther = self.feeManager.getTotalFeesPerEther();
-        self.totalFees = (self.poolContributionBalance * feesPerEther) / 1 ether;
+        uint totalFees = (self.poolContributionBalance * self.feeManager.getTotalFeesPerEther()) / 1 ether;
         self.poolRemainingBalance = this.balance - self.poolContributionBalance;
 
-        uint gasCosts = calcDistributionFees(60e9, self.totalContributors, self.totalTokenDrops);
+        uint gasCosts = calcDistributionFees(gasPriceDistribution, self.totalContributors, self.totalTokenDrops);
         if (gasCosts > 0) {
             self.autoDistributionWallet.transfer(gasCosts);
         }
@@ -347,12 +361,12 @@ library PoolLib {
             _presaleAddress.call.gas(
                 (gasLimit > 0) ? gasLimit : msg.gas
             ).value(
-                self.poolContributionBalance - self.totalFees - gasCosts
+                self.poolContributionBalance - totalFees - gasCosts
             )(data)
         );
     }
 
-    function forwardTransaction(PoolStorage storage self, address destination, uint gasLimit, bytes data) {
+    function forwardTransaction(PoolStorage storage self, address destination, uint gasLimit, bytes data) public {
         onlyAdmins(self);
         require(self.state != State.Failed);
         TransactionForwarded(destination, gasLimit, data);
@@ -363,11 +377,10 @@ library PoolLib {
         );
     }
 
-    function expectRefund(PoolStorage storage self, address sender) {
+    function expectRefund(PoolStorage storage self, address sender) public {
         onlyAdmins(self);
         require(self.state == State.Paid || self.state == State.Refund);
         require(self.expectedTokenAddress == address(0));
-        self.totalFees = 0;
         if (sender != self.refundSenderAddress) {
             self.refundSenderAddress = sender;
             ExpectingRefund(sender);
@@ -377,16 +390,16 @@ library PoolLib {
         }
     }
 
-    function transferFees(PoolStorage storage self) returns(uint) {
+    function transferFees(PoolStorage storage self) public returns(uint) {
         canClaimTokens(self);
-        require(self.totalFees > 0);
-        uint amount = self.totalFees;
-        self.totalFees = 0;
-        FeesTransferred(amount);
-        return self.feeManager.sendFees.value(amount)();
+        require(!self.feesTransferred);
+        self.feesTransferred = true;
+        uint totalFees = (self.poolContributionBalance * self.feeManager.getTotalFeesPerEther()) / 1 ether;
+        FeesTransferred(totalFees);
+        return self.feeManager.sendFees.value(totalFees)();
     }
 
-    function transferAndDistributeFees(PoolStorage storage self) {
+    function transferAndDistributeFees(PoolStorage storage self) public {
         uint creatorFees = transferFees(self);
         if (creatorFees > 0) {
             FeesDistributed();
@@ -394,7 +407,7 @@ library PoolLib {
         }
     }
 
-    function confirmTokens(PoolStorage storage self, address tokenAddress, bool claimFees) {
+    function confirmTokens(PoolStorage storage self, address tokenAddress, bool claimFees) public {
         onlyAdmins(self);
         onState(self, State.Paid);
         require(self.expectedTokenAddress == address(0));
@@ -411,20 +424,21 @@ library PoolLib {
         }
     }
 
-    function withdrawAll(PoolStorage storage self) {
-        if (self.state == State.Open) {
-            ParticipantState storage balance = self.balances[msg.sender];
-            uint total = balance.remaining;
-            if (total + balance.contribution == 0) {
+    function withdrawAll(PoolStorage storage self) public {
+        State currentState = self.state;
+        if (currentState == State.Open) {
+            ParticipantState storage pState = self.pStates[msg.sender];
+            uint total = pState.remaining;
+            if (total + pState.contribution == 0) {
                 return;
             }
-            if (balance.contribution > 0) {
+            if (pState.contribution > 0) {
                 self.totalContributors--;
-                total += balance.contribution;
+                total += pState.contribution;
             }
 
-            self.poolContributionBalance -= balance.contribution;
-            balance.contribution = 0;
+            self.poolContributionBalance -= pState.contribution;
+            pState.contribution = 0;
 
             Withdrawal(
                 msg.sender,
@@ -434,50 +448,87 @@ library PoolLib {
                 self.poolContributionBalance
             );
 
-            balance.remaining = 0;
+            pState.remaining = 0;
             require(
                 msg.sender.call.value(total)()
             );
             return;
         }
         require(
-            self.state == State.Refund || self.state == State.Failed || self.state == State.Paid
+            currentState == State.Refund || currentState == State.Failed || currentState == State.Paid
         );
+        uint feesPerEther = 0;
+        if (currentState == State.Paid) {
+            feesPerEther = self.feeManager.getTotalFeesPerEther();
+        }
 
-        uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, self.totalTokenDrops);
-        uint totalPoolContributionLessGasCosts = self.poolContributionBalance - self.totalContributors * gasCostsPerRecipient;
+        uint gasCostsPerRecipient = calcDistributionFees(gasPriceDistribution, 1, self.totalTokenDrops);
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
+        uint netTotalPoolContribution = poolContributionBalance - totalFees - self.totalContributors * gasCostsPerRecipient;
+        uint feesAndRemaining = self.poolRemainingBalance;
+        // fees remain in the pool until tokens are confirmed
+        if (self.expectedTokenAddress == address(0)) {
+            feesAndRemaining += totalFees;
+        }
 
-        withdrawRemainingAndSurplus(self, msg.sender, gasCostsPerRecipient, totalPoolContributionLessGasCosts);
+        withdrawRemainingAndSurplus(
+            self,
+            msg.sender,
+            feesPerEther,
+            gasCostsPerRecipient,
+            this.balance - feesAndRemaining,
+            netTotalPoolContribution
+        );
     }
 
-    function withdrawAllForMany(PoolStorage storage self, address[] recipients) {
+    function withdrawAllForMany(PoolStorage storage self, address[] recipients) public {
+        State currentState = self.state;
         require(
-            self.state == State.Refund || self.state == State.Failed || self.state == State.Paid
+            currentState == State.Refund || currentState == State.Failed || currentState == State.Paid
         );
+        uint feesPerEther = 0;
+        if (currentState == State.Paid) {
+            feesPerEther = self.feeManager.getTotalFeesPerEther();
+        }
 
-        uint gasCostsPerRecipient = calcDistributionFees(60e9, 1, self.totalTokenDrops);
-        uint totalPoolContributionLessGasCosts = self.poolContributionBalance - self.totalContributors * gasCostsPerRecipient;
+        uint gasCostsPerRecipient = calcDistributionFees(gasPriceDistribution, 1, self.totalTokenDrops);
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
+        uint netTotalPoolContribution = poolContributionBalance - totalFees - self.totalContributors * gasCostsPerRecipient;
+        uint feesAndRemaining = self.poolRemainingBalance;
+        // fees remain in the pool until tokens are confirmed
+        if (self.expectedTokenAddress == address(0)) {
+            feesAndRemaining += totalFees;
+        }
 
         for (uint i = 0; i < recipients.length; i++) {
-            withdrawRemainingAndSurplus(self, recipients[i], gasCostsPerRecipient, totalPoolContributionLessGasCosts);
+            withdrawRemainingAndSurplus(
+                self,
+                recipients[i],
+                feesPerEther,
+                gasCostsPerRecipient,
+                this.balance - feesAndRemaining,
+                netTotalPoolContribution
+            );
         }
     }
 
-    function withdraw(PoolStorage storage self, uint amount) {
+    function withdraw(PoolStorage storage self, uint amount) public {
         onState(self, State.Open);
-        ParticipantState storage balance = self.balances[msg.sender];
-        uint total = balance.remaining + balance.contribution;
-        require(total >= amount && amount >= balance.remaining);
+        ParticipantState storage pState = self.pStates[msg.sender];
+        uint total = pState.remaining + pState.contribution;
+        require(total >= amount && amount >= pState.remaining);
 
-        uint debit = amount - balance.remaining;
-        balance.remaining = 0;
+        uint debit = amount - pState.remaining;
+        pState.remaining = 0;
         if (debit > 0) {
-            balance.contribution -= debit;
+            pState.contribution -= debit;
             self.poolContributionBalance -= debit;
             require(
-                balance.contribution >= self.minContribution || balance.contribution == 0
+                pState.contribution >= self.minContribution || pState.contribution == 0
             );
-            if (balance.contribution == 0) {
+            if (pState.contribution == 0) {
                 self.totalContributors--;
             }
         }
@@ -485,8 +536,8 @@ library PoolLib {
         Withdrawal(
             msg.sender,
             amount,
-            balance.remaining,
-            balance.contribution,
+            pState.remaining,
+            pState.contribution,
             self.poolContributionBalance
         );
         require(
@@ -495,205 +546,358 @@ library PoolLib {
     }
 
     // Transfer tokens for all contributors, but can exceed block gas limit
-    function transferTokensToAll(PoolStorage storage self, address tokenAddress) {
+    function transferTokensToAll(PoolStorage storage self, address tokenAddress) public {
         canClaimTokens(self);
         uint tokenBalance = ERC20(tokenAddress).balanceOf(address(this));
+        uint gasCostsPerRecipient = calcDistributionFees(gasPriceDistribution, 1, self.totalTokenDrops);
+        uint feesPerEther = self.feeManager.getTotalFeesPerEther();
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
+        uint netTotalPoolContribution = poolContributionBalance - totalFees - self.totalContributors * gasCostsPerRecipient;
+        QuotaTracker.Data storage quotaTracker = self.tokenDeposits[tokenAddress];
 
         for (uint i = 0; i < self.participants.length; i++) {
+            address recipient = self.participants[i];
             if (tokenBalance > 0) {
-                tokenBalance = transferTokensToRecipient(self, tokenAddress, self.participants[i], tokenBalance);
+                uint share = calculateShare(
+                    quotaTracker,
+                    recipient,
+                    self.pStates[recipient].contribution,
+                    feesPerEther,
+                    gasCostsPerRecipient,
+                    tokenBalance,
+                    netTotalPoolContribution
+                );
+                tokenBalance = transferTokensToRecipient(
+                    quotaTracker,
+                    tokenAddress,
+                    recipient,
+                    share,
+                    tokenBalance
+                );
             }
-            withdrawRemaining(self, self.participants[i]);
+            withdrawRemaining(self, recipient);
         }
     }
 
-    function transferTokensTo(PoolStorage storage self, address tokenAddress, address[] recipients) {
+    function transferTokensTo(PoolStorage storage self, address tokenAddress, address[] recipients) public {
         canClaimTokens(self);
         uint tokenBalance = ERC20(tokenAddress).balanceOf(address(this));
+        uint gasCostsPerRecipient = calcDistributionFees(gasPriceDistribution, 1, self.totalTokenDrops);
+        uint feesPerEther = self.feeManager.getTotalFeesPerEther();
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
+        uint netTotalPoolContribution = poolContributionBalance - totalFees - self.totalContributors * gasCostsPerRecipient;
+        QuotaTracker.Data storage quotaTracker = self.tokenDeposits[tokenAddress];
 
         for (uint i = 0; i < recipients.length; i++) {
+            address recipient = recipients[i];
             if (tokenBalance > 0) {
-                tokenBalance = transferTokensToRecipient(self, tokenAddress, recipients[i], tokenBalance);
+                uint share = calculateShare(
+                    quotaTracker,
+                    recipient,
+                    self.pStates[recipient].contribution,
+                    feesPerEther,
+                    gasCostsPerRecipient,
+                    tokenBalance,
+                    netTotalPoolContribution
+                );
+                tokenBalance = transferTokensToRecipient(
+                    quotaTracker,
+                    tokenAddress,
+                    recipient,
+                    share,
+                    tokenBalance
+                );
             }
-            withdrawRemaining(self, recipients[i]);
+            withdrawRemaining(self, recipient);
         }
     }
 
-    function modifyWhitelist(PoolStorage storage self, address[] toInclude, address[] toExclude) {
+    function modifyWhitelist(PoolStorage storage self, address[] toInclude, address[] toExclude) public {
         onlyAdmins(self);
         onState(self, State.Open);
         if (!self.restricted) {
             WhitelistEnabled();
             self.restricted = true;
         }
-        uint i = 0;
+        uint i;
+        uint minContribution = self.minContribution;
+        uint maxContribution = self.maxContribution;
+        uint maxPoolBalance = self.maxPoolBalance;
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalContributors = self.totalContributors;
+        address participant;
 
         for (i = 0; i < toExclude.length; i++) {
-            address participant = toExclude[i];
-            ParticipantState storage balance = self.balances[participant];
+            participant = toExclude[i];
+            ParticipantState storage pState = self.pStates[participant];
 
-            if (balance.whitelisted) {
-                balance.whitelisted = false;
+            if (pState.whitelisted) {
+                pState.whitelisted = false;
                 RemovedFromWhitelist(participant);
 
-                if (balance.contribution > 0) {
-                    self.totalContributors--;
-                    self.poolContributionBalance -= balance.contribution;
-                    balance.remaining += balance.contribution;
-                    balance.contribution = 0;
+                if (pState.contribution > 0) {
+                    totalContributors--;
+                    poolContributionBalance -= pState.contribution;
+                    pState.remaining += pState.contribution;
+                    pState.contribution = 0;
                     ContributionAdjusted(
                         participant,
-                        balance.remaining,
-                        balance.contribution,
-                        self.poolContributionBalance
+                        pState.remaining,
+                        pState.contribution,
+                        poolContributionBalance
                     );
                 }
             }
         }
 
         for (i = 0; i < toInclude.length; i++) {
-            includeInWhitelist(self, toInclude[i]);
+            participant = toInclude[i];
+            (poolContributionBalance, totalContributors) = includeInWhitelist(
+                self.pStates[participant],
+                participant,
+                minContribution,
+                maxContribution,
+                maxPoolBalance,
+                poolContributionBalance,
+                totalContributors
+            );
         }
+
+        self.poolContributionBalance = poolContributionBalance;
+        self.totalContributors = totalContributors;
     }
 
-    function removeWhitelist(PoolStorage storage self) {
+    function removeWhitelist(PoolStorage storage self) public {
         onlyAdmins(self);
         onState(self, State.Open);
         require(self.restricted);
         self.restricted = false;
         WhitelistDisabled();
 
+        uint minContribution = self.minContribution;
+        uint maxContribution = self.maxContribution;
+        uint maxPoolBalance = self.maxPoolBalance;
+        uint poolContributionBalance = self.poolContributionBalance;
+        uint totalContributors = self.totalContributors;
+
         for (uint i = 0; i < self.participants.length; i++) {
-            includeInWhitelist(self, self.participants[i]);
+            address participant = self.participants[i];
+            (poolContributionBalance, totalContributors) = includeInWhitelist(
+                self.pStates[participant],
+                participant,
+                minContribution,
+                maxContribution,
+                maxPoolBalance,
+                poolContributionBalance,
+                totalContributors
+            );
         }
+
+        self.poolContributionBalance = poolContributionBalance;
+        self.totalContributors = totalContributors;
     }
 
-    function setTokenDrops(PoolStorage storage self, uint _totalTokenDrops) {
+    function setTokenDrops(PoolStorage storage self, uint _totalTokenDrops) public {
         onlyAdmins(self);
         onState(self, State.Open);
         self.totalTokenDrops = _totalTokenDrops;
         validatePoolSettings(self);
         AutoDistributionConfigured(
-            60e9,
+            gasPriceDistribution,
             self.totalTokenDrops,
             self.autoDistributionWallet
         );
     }
 
-    function setContributionSettings(PoolStorage storage self, uint _minContribution, uint _maxContribution, uint _maxPoolBalance, address[] toRebalance) {
+    function setContributionSettings(PoolStorage storage self, uint _minContribution, uint _maxContribution, uint _maxPoolBalance, address[] toRebalance) public {
         onlyAdmins(self);
         onState(self, State.Open);
         // we raised the minContribution threshold
         bool rebalanceForAll = (self.minContribution < _minContribution);
         // we lowered the maxContribution threshold
         rebalanceForAll = rebalanceForAll || (self.maxContribution > _maxContribution);
-        // we want to make maxPoolBalance lower than the current pool balance
-        rebalanceForAll = rebalanceForAll || (self.poolContributionBalance > _maxPoolBalance);
 
         self.minContribution = _minContribution;
         self.maxContribution = _maxContribution;
         self.maxPoolBalance = _maxPoolBalance;
 
         validatePoolSettings(self);
-        ContributionSettingsChanged(self.minContribution, self.maxContribution, self.maxPoolBalance);
+        ContributionSettingsChanged(_minContribution, _maxContribution, _maxPoolBalance);
 
 
         uint i;
-        ParticipantState storage balance;
+        ParticipantState storage pState;
         address participant;
+        uint poolContributionBalance;
+        uint totalContributors;
         if (rebalanceForAll) {
-            self.poolContributionBalance = 0;
-            self.totalContributors = 0;
             for (i = 0; i < self.participants.length; i++) {
                 participant = self.participants[i];
-                balance = self.balances[participant];
+                pState = self.pStates[participant];
 
-                balance.remaining += balance.contribution;
-                balance.contribution = 0;
-                (balance.contribution, balance.remaining) = getContribution(self, participant, 0);
-                if (balance.contribution > 0) {
-                    self.poolContributionBalance += balance.contribution;
-                    self.totalContributors++;
+                if (pState.contribution == 0) {
+                    continue;
+                }
+
+                pState.remaining += pState.contribution;
+                pState.contribution = 0;
+                (pState.contribution, pState.remaining) = getContribution(
+                    _minContribution,
+                    _maxContribution,
+                    _maxPoolBalance,
+                    poolContributionBalance,
+                    pState,
+                    0
+                );
+                if (pState.contribution > 0) {
+                    poolContributionBalance += pState.contribution;
+                    totalContributors++;
                 }
 
                 ContributionAdjusted(
                     participant,
-                    balance.remaining,
-                    balance.contribution,
-                    self.poolContributionBalance
+                    pState.remaining,
+                    pState.contribution,
+                    poolContributionBalance
+                );
+            }
+        } else if (self.poolContributionBalance > self.maxPoolBalance) {
+            poolContributionBalance = self.poolContributionBalance;
+            totalContributors = self.totalContributors;
+
+            for (i = self.participants.length - 1; i >= 0 && poolContributionBalance > _maxPoolBalance; i--) {
+                participant = self.participants[i];
+                pState = self.pStates[participant];
+
+                if (pState.contribution == 0) {
+                    continue;
+                }
+
+                pState.remaining += pState.contribution;
+                poolContributionBalance -= pState.contribution;
+                pState.contribution = 0;
+                totalContributors--;
+
+                if (poolContributionBalance < _maxPoolBalance) {
+                    (pState.contribution, pState.remaining) = getContribution(
+                        _minContribution,
+                        _maxContribution,
+                        _maxPoolBalance,
+                        poolContributionBalance,
+                        pState,
+                        0
+                    );
+                    if (pState.contribution > 0) {
+                        poolContributionBalance += pState.contribution;
+                        totalContributors++;
+                    }
+                }
+
+                ContributionAdjusted(
+                    participant,
+                    pState.remaining,
+                    pState.contribution,
+                    poolContributionBalance
                 );
             }
         } else {
+            poolContributionBalance = self.poolContributionBalance;
+            totalContributors = self.totalContributors;
+
             for (i = 0; i < toRebalance.length; i++) {
                 participant = toRebalance[i];
-                balance = self.balances[participant];
+                pState = self.pStates[participant];
+
+                if (!included(self, pState)) {
+                    continue;
+                }
 
                 uint newContribution;
                 uint newRemaining;
-                (newContribution, newRemaining) = getContribution(self, participant, 0);
-                self.poolContributionBalance = self.poolContributionBalance - balance.contribution + newContribution;
-                if (newContribution > 0 && balance.contribution == 0) {
-                    self.totalContributors++;
-                } else if (newContribution == 0 && balance.contribution > 0) {
-                    self.totalContributors--;
+                (newContribution, newRemaining) = getContribution(
+                    _minContribution,
+                    _maxContribution,
+                    _maxPoolBalance,
+                    poolContributionBalance,
+                    pState,
+                    0
+                );
+
+                poolContributionBalance = poolContributionBalance - pState.contribution + newContribution;
+                if (newContribution > 0 && pState.contribution == 0) {
+                    totalContributors++;
+                } else if (newContribution == 0 && pState.contribution > 0) {
+                    totalContributors--;
                 }
-                (balance.contribution, balance.remaining) = (newContribution, newRemaining);
+                (pState.contribution, pState.remaining) = (newContribution, newRemaining);
 
                 ContributionAdjusted(
                     participant,
-                    balance.remaining,
-                    balance.contribution,
-                    self.poolContributionBalance
+                    pState.remaining,
+                    pState.contribution,
+                    poolContributionBalance
                 );
             }
         }
+
+        self.poolContributionBalance = poolContributionBalance;
+        self.totalContributors = totalContributors;
     }
 
-    function includeInWhitelist(PoolStorage storage self, address participant) {
-        ParticipantState storage balance = self.balances[participant];
-
-        if (balance.whitelisted) {
-            return;
+    function includeInWhitelist(ParticipantState storage pState, address participant, uint minContribution, uint maxContribution, uint maxPoolBalance, uint poolContributionBalance, uint totalContributors) public returns (uint, uint) {
+        if (pState.whitelisted) {
+            return (poolContributionBalance, totalContributors);
         }
 
-        balance.whitelisted = true;
+        pState.whitelisted = true;
         IncludedInWhitelist(participant);
-        if (balance.remaining == 0) {
-            return;
+        if (pState.remaining == 0) {
+            return (poolContributionBalance, totalContributors);
         }
 
-        (balance.contribution, balance.remaining) = getContribution(self, participant, 0);
-        if (balance.contribution > 0) {
-            self.totalContributors++;
-            self.poolContributionBalance += balance.contribution;
+        (pState.contribution, pState.remaining) = getContribution(
+            minContribution,
+            maxContribution,
+            maxPoolBalance,
+            poolContributionBalance,
+            pState,
+            0
+        );
+
+        if (pState.contribution > 0) {
+            totalContributors++;
+            poolContributionBalance += pState.contribution;
             ContributionAdjusted(
                 participant,
-                balance.remaining,
-                balance.contribution,
-                self.poolContributionBalance
+                pState.remaining,
+                pState.contribution,
+                poolContributionBalance
             );
         }
+
+        return (poolContributionBalance, totalContributors);
     }
 
-    function changeState(PoolStorage storage self, State desiredState) {
+    function changeState(PoolStorage storage self, State desiredState) public {
         StateChange(uint8(self.state), uint8(desiredState));
         self.state = desiredState;
     }
 
-    function withdrawRemainingAndSurplus(PoolStorage storage self, address recipient, uint gasCostsPerRecipient, uint totalPoolContributionLessGasCosts) {
-        ParticipantState storage balance = self.balances[recipient];
-        uint total = balance.remaining;
-        uint numerator = balance.contribution;
-
-        if (numerator > 0) {
-            numerator -= gasCostsPerRecipient;
-        }
-
-        uint share = self.extraEtherDeposits.claimShare(
+    function withdrawRemainingAndSurplus(PoolStorage storage self, address recipient, uint feesPerEther, uint gasCostsPerRecipient, uint availableBalance, uint netTotalPoolContribution) public {
+        ParticipantState storage pState = self.pStates[recipient];
+        uint total = pState.remaining;
+        uint share = calculateShare(
+            self.extraEtherDeposits,
             recipient,
-            this.balance - self.totalFees - self.poolRemainingBalance,
-            [numerator, totalPoolContributionLessGasCosts]
+            pState.contribution,
+            feesPerEther,
+            gasCostsPerRecipient,
+            availableBalance,
+            netTotalPoolContribution
         );
+
         if (share == 0 && total == 0) {
             return;
         }
@@ -703,15 +907,15 @@ library PoolLib {
             recipient,
             total,
             0,
-            balance.contribution,
+            pState.contribution,
             self.poolContributionBalance
         );
         RefundClaimed(recipient, share);
 
         // Remove only if there is something remaining
         if(total > 0) {
-          self.poolRemainingBalance -= total;
-          balance.remaining = 0;
+            self.poolRemainingBalance -= total;
+            pState.remaining = 0;
         }
         total += share;
 
@@ -720,13 +924,13 @@ library PoolLib {
         );
     }
 
-    function withdrawRemaining(PoolStorage storage self, address recipient) {
+    function withdrawRemaining(PoolStorage storage self, address recipient) public {
         if (self.poolRemainingBalance == 0) {
             return;
         }
 
-        ParticipantState storage balance = self.balances[recipient];
-        uint total = balance.remaining;
+        ParticipantState storage pState = self.pStates[recipient];
+        uint total = pState.remaining;
 
         if (total == 0) {
             return;
@@ -736,42 +940,55 @@ library PoolLib {
             recipient,
             total,
             0,
-            balance.contribution,
+            pState.contribution,
             self.poolContributionBalance
         );
 
         self.poolRemainingBalance -= total;
-        balance.remaining = 0;
+        pState.remaining = 0;
         require(
             recipient.call.value(total)()
         );
     }
 
-    function transferTokensToRecipient(PoolStorage storage self, address tokenAddress, address recipient, uint tokenBalance) returns(uint) {
-        ParticipantState storage balance = self.balances[recipient];
-        uint share = self.tokenDeposits[tokenAddress].claimShare(
-            recipient,
-            tokenBalance,
-            [balance.contribution, self.poolContributionBalance]
-        );
+    function transferTokensToRecipient(QuotaTracker.Data storage quotaTracker, address tokenAddress, address recipient, uint share, uint availableBalance) public returns(uint) {
+        if (share > 0) {
+            availableBalance -= share;
+            bool succeeded = ERC20(tokenAddress).transfer(recipient, share);
+            if (!succeeded) {
+                quotaTracker.undoClaim(recipient, share);
+                availableBalance += share;
+            }
 
-        tokenBalance -= share;
-        bool succeeded = ERC20(tokenAddress).transfer(recipient, share);
-        if (!succeeded) {
-            self.tokenDeposits[tokenAddress].undoClaim(recipient, share);
-            tokenBalance += share;
+            TokenTransfer(tokenAddress, recipient, share, succeeded, availableBalance);
+        }
+        return availableBalance;
+    }
+
+    function calculateShare(QuotaTracker.Data storage quotaTracker, address recipient, uint contribution, uint feesPerEther, uint gasCostsPerRecipient, uint availableBalance, uint netTotalPoolContribution) public returns(uint) {
+        uint numerator = contribution;
+        if (numerator == 0) {
+            return 0;
         }
 
-        TokenTransfer(tokenAddress, recipient, share, succeeded, tokenBalance);
-        return tokenBalance;
+        if (feesPerEther > 0) {
+            numerator -= (numerator * feesPerEther) / 1 ether;
+        }
+        numerator -= gasCostsPerRecipient;
+
+        return quotaTracker.claimShare(
+            recipient,
+            availableBalance,
+            [numerator, netTotalPoolContribution]
+        );
     }
 
     // Calculate the fees (ie gas cost) required for distribution
-    function calcDistributionFees(uint gasPrice, uint numContributors, uint transfersPerContributor) returns(uint) {
+    function calcDistributionFees(uint gasPrice, uint numContributors, uint transfersPerContributor) public pure returns(uint) {
         return gasPrice * numContributors * transfersPerContributor * 150000;
     }
 
-    function validatePoolSettings(PoolStorage storage self) constant {
+    function validatePoolSettings(PoolStorage storage self) public constant {
         require(
             self.totalTokenDrops <= 10 &&
             self.minContribution <= self.maxContribution &&
@@ -779,25 +996,23 @@ library PoolLib {
             self.maxPoolBalance <= 1e9 ether
         );
 
-        uint gasCosts = calcDistributionFees(60e9, 1, self.totalTokenDrops);
+        uint gasCosts = calcDistributionFees(gasPriceDistribution, 1, self.totalTokenDrops);
         require(self.minContribution >= 2 * gasCosts);
     }
 
-    function included(PoolStorage storage self, address participant) constant returns (bool) {
-        return !self.restricted || self.balances[participant].whitelisted;
+    function included(PoolStorage storage self, ParticipantState storage pState) public constant returns (bool) {
+        return !self.restricted || pState.whitelisted;
     }
 
-    function getContribution(PoolStorage storage self, address participant, uint amount) constant returns (uint, uint) {
-        ParticipantState storage balance = self.balances[participant];
-        uint total = balance.remaining + balance.contribution + amount;
+    function getContribution(uint minContribution, uint maxContribution, uint maxPoolBalance, uint poolContributionBalance,  ParticipantState storage pState, uint amount) public constant returns (uint, uint) {
+        uint total = pState.remaining + pState.contribution + amount;
         uint contribution = total;
-        if (!included(self, participant)) {
-            return (0, total);
-        }
 
-        contribution = Util.min(self.maxContribution, contribution);
-        contribution = Util.min(self.maxPoolBalance - self.poolContributionBalance + balance.contribution, contribution);
-        if (contribution < self.minContribution) {
+        if (!pState.admin) {
+            contribution = Util.min(maxContribution, contribution);
+        }
+        contribution = Util.min(maxPoolBalance - poolContributionBalance + pState.contribution, contribution);
+        if (contribution < minContribution) {
             return (0, total);
         }
         return (contribution, total - contribution);

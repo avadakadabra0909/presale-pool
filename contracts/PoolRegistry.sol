@@ -1,4 +1,4 @@
-pragma solidity ^0.4.15;
+pragma solidity 0.4.19;
 
 
 contract PoolRegistry {
@@ -9,8 +9,8 @@ contract PoolRegistry {
         address _contractAddress
     );
 
-    function register(uint256 code) external {
-        require(tx.origin != msg.sender);
-        NewContract(tx.origin, code, msg.sender);
+    function register(address contractCreator, uint256 code) external {
+        require(contractCreator != msg.sender);
+        NewContract(contractCreator, code, msg.sender);
     }
 }

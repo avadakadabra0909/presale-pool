@@ -1,16 +1,18 @@
 const fs = require("fs");
+const BigNumber = require('bignumber.js');
+BigNumber.config({ DECIMAL_PLACES: 52, ROUNDING_MODE: BigNumber.ROUND_DOWN });
 const chai = require('chai');
+chai.use(require('chai-bignumber')(BigNumber));
 const solc = require('solc');
-const Web3Utils = require('web3-utils');
 
 const expect = chai.expect;
 
 function toWei(web3, value, unit) {
-	return web3.utils.toWei(value.toString(), unit);
+    return web3.utils.toWei(value.toString(), unit);
 }
 
 function fromWei(web3, value, unit) {
-	return web3.utils.fromWei(value.toString(), unit);
+    return web3.utils.fromWei(value.toString(), unit);
 }
 
 function findImports (name) {
@@ -40,6 +42,11 @@ function compileContract(contractName, registryContract) {
     let result = solc.compile(
         { sources: input }, 1, findImports
     );
+
+    if(result.errors && result.errors.length > 0) {
+        console.log(result.errors);
+    }
+
     let compiledContract = result.contracts[`${contractName}:${contractName}`];
     if (contractName !== "PoolLib") {
         compileCache[contractName] = compiledContract;
@@ -83,8 +90,8 @@ async function deployContract(web3, contractName, creatorAddress, contractArgs, 
         contractArgs,
         initialBalance
     );
-	contract.setProvider(web3.currentProvider);
-	return contract;
+    contract.setProvider(web3.currentProvider);
+    return contract;
 }
 
 function createPoolArgs(options) {
@@ -132,10 +139,10 @@ async function getBalances(PresalePool) {
     let exists = participantBalances[4];
 
     expect(addresses.length)
-    .to.equal(contribution.length)
-    .to.equal(remaining.length)
-    .to.equal(whitelisted.length)
-    .to.equal(exists.length);
+        .to.equal(contribution.length)
+        .to.equal(remaining.length)
+        .to.equal(whitelisted.length)
+        .to.equal(exists.length);
 
     let balances = {};
     contribution.forEach((val, i) => {
@@ -149,6 +156,35 @@ async function getBalances(PresalePool) {
     return balances;
 }
 
+/**
+ * @param contribution InWei
+ * @param poolContributionBalance InWei
+ * @param {Number} feePercentage
+ * @param gasCostPerContributor InWei
+ * @param {Number} numContributors
+ * @param totalTokensReceived total tokens received (without decimals)
+ * @returns {BigNumber} The number of tokens received (not formatted)
+ */
+function getTokenShare(contribution, poolContributionBalance, feePercentage, gasCostPerContributor, numContributors, totalTokensReceived) {
+    let numerator = contribution.sub(
+        contribution.mul(feePercentage).round(0)
+    )
+    .sub(gasCostPerContributor);
+
+    let denominator = poolContributionBalance.sub(
+        poolContributionBalance.mul(feePercentage).round(0)
+    ).sub(gasCostPerContributor.mul(numContributors));
+
+    return numerator.mul(totalTokensReceived).div(denominator).round(0);
+}
+
+/**
+ * @param web3
+ * @param PresalePool contract
+ * @param expectedBalances Object with address as property name and balance in wei as value
+ * @param expectedPoolBalance Balance of the pool in Wei
+ * @returns {Promise.<void>}
+ */
 async function verifyState(web3, PresalePool, expectedBalances, expectedPoolBalance) {
     let balances = await getBalances(PresalePool);
 
@@ -212,7 +248,7 @@ async function expectBalanceChanges(web3, addresses, differences, operation) {
 }
 
 async function expectBalanceChange(web3, address, expectedDifference, operation) {
-	expectedDifference = parseInt(expectedDifference);
+    expectedDifference = parseInt(expectedDifference);
     let balance = await web3.eth.getBalance(address);
     await operation();
     let balanceAfterRefund = await web3.eth.getBalance(address);
@@ -227,10 +263,15 @@ async function expectBalanceChange(web3, address, expectedDifference, operation)
     }
 }
 
+async function tokenBalanceEquals(contract, address, amount) {
+    const balance = new BigNumber(await contract.methods.balanceOf(address).call());
+    expect(balance).to.be.bignumber.equal(amount);
+}
+
 function distributionGasCosts(options) {
     let { numContributors, numDrops, gasPriceGwei } = options;
     if (gasPriceGwei == null) {
-        gasPriceGwei = 60 * Math.pow(10, 9);
+        gasPriceGwei = 40 * Math.pow(10, 9);
     } else {
         gasPriceGwei *= Math.pow(10, 9);
     }
@@ -238,8 +279,9 @@ function distributionGasCosts(options) {
 }
 
 module.exports = {
-	toWei: toWei,
-	fromWei: fromWei,
+    BigNumber: BigNumber,
+    toWei: toWei,
+    fromWei: fromWei,
     createPoolArgs: createPoolArgs,
     deployContract: deployContract,
     distributionGasCosts: distributionGasCosts,
@@ -250,4 +292,6 @@ module.exports = {
     getBalances: getBalances,
     methodWithGas: methodWithGas,
     verifyState: verifyState,
+    tokenBalanceEquals: tokenBalanceEquals,
+    getTokenShare: getTokenShare
 };
