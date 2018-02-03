@@ -151,11 +151,11 @@ contract PresalePool {
         bool[] memory exists = new bool[](poolStorage.participants.length);
 
         for (uint i = 0; i < poolStorage.participants.length; i++) {
-            PoolLib.ParticipantState storage balance = poolStorage.balances[poolStorage.participants[i]];
-            contribution[i] = balance.contribution;
-            remaining[i] = balance.remaining;
-            whitelisted[i] = balance.whitelisted;
-            exists[i] = balance.exists;
+            PoolLib.ParticipantState storage pState = poolStorage.pStates[poolStorage.participants[i]];
+            contribution[i] = pState.contribution;
+            remaining[i] = pState.remaining;
+            whitelisted[i] = pState.whitelisted;
+            exists[i] = pState.exists;
         }
 
         return (poolStorage.participants, contribution, remaining, whitelisted, exists);
