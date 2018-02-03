@@ -20,7 +20,10 @@ interface FeeManager {
 library PoolLib {
     using QuotaTracker for QuotaTracker.Data;
 
+    uint private constant gasPriceDistribution = 40e9;
+
     enum State { Open, Failed, Paid, Refund }
+
     struct ParticipantState {
         uint contribution;
         uint remaining;
@@ -198,7 +201,7 @@ library PoolLib {
         self.totalTokenDrops = _totalTokenDrops;
         self.autoDistributionWallet = _autoDistributionWallet;
         AutoDistributionConfigured(
-            40e9,
+            gasPriceDistribution,
             _totalTokenDrops,
             _autoDistributionWallet
         );
@@ -301,7 +304,7 @@ library PoolLib {
         self.poolRemainingBalance = this.balance - self.poolContributionBalance;
         if (self.totalTokenDrops > 0) {
             self.totalTokenDrops = 1;
-            uint gasCosts = calcDistributionFees(40e9, self.totalContributors, 1);
+            uint gasCosts = calcDistributionFees(gasPriceDistribution, self.totalContributors, 1);
             self.autoDistributionWallet.transfer(gasCosts);
         }
     }
@@ -347,7 +350,7 @@ library PoolLib {
         uint totalFees = (self.poolContributionBalance * self.feeManager.getTotalFeesPerEther()) / 1 ether;
         self.poolRemainingBalance = this.balance - self.poolContributionBalance;
 
-        uint gasCosts = calcDistributionFees(40e9, self.totalContributors, self.totalTokenDrops);
+        uint gasCosts = calcDistributionFees(gasPriceDistribution, self.totalContributors, self.totalTokenDrops);
         if (gasCosts > 0) {
             self.autoDistributionWallet.transfer(gasCosts);
         }
@@ -456,7 +459,7 @@ library PoolLib {
             feesPerEther = self.feeManager.getTotalFeesPerEther();
         }
 
-        uint gasCostsPerRecipient = calcDistributionFees(40e9, 1, self.totalTokenDrops);
+        uint gasCostsPerRecipient = calcDistributionFees(gasPriceDistribution, 1, self.totalTokenDrops);
         uint poolContributionBalance = self.poolContributionBalance;
         uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
         uint netTotalPoolContribution = poolContributionBalance - totalFees - self.totalContributors * gasCostsPerRecipient;
@@ -486,7 +489,7 @@ library PoolLib {
             feesPerEther = self.feeManager.getTotalFeesPerEther();
         }
 
-        uint gasCostsPerRecipient = calcDistributionFees(40e9, 1, self.totalTokenDrops);
+        uint gasCostsPerRecipient = calcDistributionFees(gasPriceDistribution, 1, self.totalTokenDrops);
         uint poolContributionBalance = self.poolContributionBalance;
         uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
         uint netTotalPoolContribution = poolContributionBalance - totalFees - self.totalContributors * gasCostsPerRecipient;
@@ -543,7 +546,7 @@ library PoolLib {
     function transferTokensToAll(PoolStorage storage self, address tokenAddress) public {
         canClaimTokens(self);
         uint tokenBalance = ERC20(tokenAddress).balanceOf(address(this));
-        uint gasCostsPerRecipient = calcDistributionFees(40e9, 1, self.totalTokenDrops);
+        uint gasCostsPerRecipient = calcDistributionFees(gasPriceDistribution, 1, self.totalTokenDrops);
         uint feesPerEther = self.feeManager.getTotalFeesPerEther();
         uint poolContributionBalance = self.poolContributionBalance;
         uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
@@ -577,7 +580,7 @@ library PoolLib {
     function transferTokensTo(PoolStorage storage self, address tokenAddress, address[] recipients) public {
         canClaimTokens(self);
         uint tokenBalance = ERC20(tokenAddress).balanceOf(address(this));
-        uint gasCostsPerRecipient = calcDistributionFees(40e9, 1, self.totalTokenDrops);
+        uint gasCostsPerRecipient = calcDistributionFees(gasPriceDistribution, 1, self.totalTokenDrops);
         uint feesPerEther = self.feeManager.getTotalFeesPerEther();
         uint poolContributionBalance = self.poolContributionBalance;
         uint totalFees = (poolContributionBalance * feesPerEther) / 1 ether;
@@ -699,7 +702,7 @@ library PoolLib {
         self.totalTokenDrops = _totalTokenDrops;
         validatePoolSettings(self);
         AutoDistributionConfigured(
-            40e9,
+            gasPriceDistribution,
             self.totalTokenDrops,
             self.autoDistributionWallet
         );
@@ -990,7 +993,7 @@ library PoolLib {
             self.maxPoolBalance <= 1e9 ether
         );
 
-        uint gasCosts = calcDistributionFees(40e9, 1, self.totalTokenDrops);
+        uint gasCosts = calcDistributionFees(gasPriceDistribution, 1, self.totalTokenDrops);
         require(self.minContribution >= 2 * gasCosts);
     }
 
